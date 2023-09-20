@@ -2,6 +2,8 @@
 //#include <GL/gl.h>
 #include <stdio.h>
 #include <math.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
 
 #include "color.h"
 
@@ -42,15 +44,15 @@ void movement(GLFWwindow * window);
 
 enum side get_side();
 
-int width = 5;
+int width = 6;
 int height = 7;
-int map[] = {1,1,1,1,1,
-             1,1,0,1,1,
-             1,0,0,0,1,
-             1,0,0,0,1,
-             1,0,1,0,1,
-             1,0,0,0,1,
-             1,1,1,1,1};
+int map[] = {1,1,1,1,1,1,
+             1,1,0,1,0,1,
+             1,0,0,0,0,1,
+             1,0,0,0,0,1,
+             1,0,1,0,0,1,
+             1,0,0,0,0,1,
+             1,1,1,1,1,1};
 
 float playerX = 2.5f;
 float playerY = 2.5f;
@@ -70,6 +72,7 @@ float ray_y;
 enum side current_side;
 
 void drawGround(){
+    glDisable(GL_TEXTURE_2D);
     glBegin(GL_TRIANGLES);
         glColor3f(0, 0, 0);
         glVertex3f(-1, 0, 0);
@@ -122,6 +125,28 @@ int main(void)
     double t = glfwGetTime();
     double time = glfwGetTime();
 
+    /* LOAD TEXTURE*/
+    int width, height, nrChannels;
+    unsigned char *data = stbi_load("texture.jpg", &width, &height, &nrChannels, 0);
+    GLuint m_TextureID;
+    glEnable (GL_TEXTURE_2D);
+
+    glGenTextures(1, &m_TextureID);
+    glBindTexture ( GL_TEXTURE_2D, m_TextureID);
+
+    glTexEnvf ( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE , GL_MODULATE);
+    glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+
+    glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glEnd();
+
+    stbi_image_free(data);
+    /*-------------------------------*/
+
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
     {
@@ -168,6 +193,20 @@ int main(void)
         }
 
         movement(window);
+
+        glEnable (GL_TEXTURE_2D);
+        glBegin(GL_QUADS);
+        //glColor3d(1, 0, 0);
+        glColor3f(1,1,1);
+        glTexCoord2f (0.0f,0.0f);
+        glVertex3f(0, 0, 0); // bottom left
+        glTexCoord2f (1.0f,0.0f);
+        glVertex3f(1, 0, 0); // bottom right
+        glTexCoord2f (1.0f,1.0f);
+        glVertex3f(0.8, 1, 0);// top right
+        glTexCoord2f (0.0f,1.0f);
+        glVertex3f(0.2, 1, 0); // top left
+        glEnd();
         
         /* Swap front and back buffers */
         glfwSwapBuffers(window);
@@ -202,7 +241,8 @@ void drawTriangle(float x1, float y1,
                   float x3, float y3,
                   float z,
                   C_color color){
-
+    
+    glDisable(GL_TEXTURE_2D);
     glBegin(GL_TRIANGLES);
         glColor3f(color.r, color.g, color.b);
         glVertex3f(x1, y1, z);
@@ -305,13 +345,19 @@ void movement(GLFWwindow * window){
         speedY = -sinf(direction) * t_delta*2;
     }
 
+    speedX *= 0.85f;
+    speedY *= 0.85f;
+
     if (map[ ((int)(playerY+speedY))*width + (int)(playerX+speedX) ] == 0){
         playerX += speedX;
         playerY += speedY;
     }
 
-    speedX = 0.f;
-    speedY = 0.f;
+    if ( fabsf(speedX)<=0.01f && fabsf(speedY)<=0.01f ){
+        speedX = 0.f;
+        speedY = 0.f;
+    }
+    
 }
 
 enum side get_side(){

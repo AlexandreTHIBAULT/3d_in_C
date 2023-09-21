@@ -10,8 +10,15 @@
 #define W_WIDTH 768
 #define W_HEIGHT 432
 
-#define V_NBRAY 768
+#define V_NBRAY 300
 #define V_FOV (M_PI/2.f)
+
+#define K_UP GLFW_KEY_W
+#define K_DOWN GLFW_KEY_S
+#define K_LEFT GLFW_KEY_A
+#define K_RIGHT GLFW_KEY_D
+#define K_TURN_LEFT GLFW_KEY_Q
+#define K_TURN_RIGHT GLFW_KEY_E
 
 enum side {
     S_RIGHT,
@@ -38,19 +45,32 @@ void drawQuadri(float x1, float y1,
 
 float distanceToWall(float X, float Y, float castDirection);
 
+void drawWallTexture(float xL, float yB, 
+                     float xR, float yT,
+                     float z,
+                     float text_start, float text_end,
+                     C_color color);
+
 void drawWall(float distance, int n);
 
 void movement(GLFWwindow * window);
 
-enum side get_side();
+enum side get_side(float X, float Y);
 
-int width = 6;
-int height = 7;
-int map[] = {1,1,1,1,1,1,
+void drawGround();
+void drawCeiling();
+
+int width_map = 6;
+int height_map = 11;
+int map[] = {1,1,2,1,2,1,
              1,1,0,1,0,1,
              1,0,0,0,0,1,
              1,0,0,0,0,1,
-             1,0,1,0,0,1,
+             1,0,2,0,0,1,
+             1,0,0,0,2,1,
+             1,0,0,0,0,1,
+             1,0,0,1,0,1,
+             1,0,0,2,2,1,
              1,0,0,0,0,1,
              1,1,1,1,1,1};
 
@@ -61,7 +81,7 @@ float direction = M_PI*0.5f*-1.f;
 float t_delta;
 
 int tileLength = 10;
-int viewRange = 4; //Nb of tile
+int viewRange = 7; //Nb of tile
 
 float speedX;
 float speedY;
@@ -71,30 +91,35 @@ float ray_y;
 
 enum side current_side;
 
-void drawGround(){
-    glDisable(GL_TEXTURE_2D);
-    glBegin(GL_TRIANGLES);
-        glColor3f(0, 0, 0);
-        glVertex3f(-1, 0, 0);
-        glColor3f(0, 0, 0);
-        glVertex3f(1, 0, 0);
-        glColor3f(0.5, 0.5, 0.5);
-        glVertex3f(-1, -1, 0);
-    glEnd();
+GLuint t_Brick;
+int width_Brick, height_Brick, nrChannels_Brick;
+GLuint t_Metal;
+int width_Metal, height_Metal, nrChannels_Metal;
+GLuint t_Error;
+int width_Error, height_Error, nrChannels_Error;
 
-    glBegin(GL_TRIANGLES);
-        glColor3f(0, 0, 0);
-        glVertex3f(1, 0, 0);
-        glColor3f(0.5, 0.5, 0.5);
-        glVertex3f(-1, -1, 0);
-        glColor3f(0.5, 0.5, 0.5);
-        glVertex3f(1, -1, 0);
+void load_texture(GLuint* texture, char* file_name, int* w, int* h, int* n){
+    unsigned char *data ;
+    data = stbi_load(file_name, w, h, n, 0);
+
+    glEnable (GL_TEXTURE_2D);
+        glGenTextures(1, texture);
+        glBindTexture ( GL_TEXTURE_2D, *texture);
+        glTexEnvf ( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE , GL_MODULATE);
+        glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+        glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, *w, *h, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
     glEnd();
+    stbi_image_free(data);
 }
 
 int main(void)
 {
     GLFWwindow * window;
+    double xpos, ypos, xpos_prev, ypos_prev;
 
     /* Initialize the library */
     if (!glfwInit())
@@ -118,34 +143,24 @@ int main(void)
 
     /* Setup key callback */
     glfwSetKeyCallback(window, key_callback);
-
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
 
     glEnable(GL_MULTISAMPLE);
 
     double t = glfwGetTime();
     double time = glfwGetTime();
+    
 
     /* LOAD TEXTURE*/
-    int width, height, nrChannels;
-    unsigned char *data = stbi_load("texture.jpg", &width, &height, &nrChannels, 0);
-    GLuint m_TextureID;
-    glEnable (GL_TEXTURE_2D);
-
-    glGenTextures(1, &m_TextureID);
-    glBindTexture ( GL_TEXTURE_2D, m_TextureID);
-
-    glTexEnvf ( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE , GL_MODULATE);
-    glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-
-    glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-    glGenerateMipmap(GL_TEXTURE_2D);
-    glEnd();
-
-    stbi_image_free(data);
+    load_texture(&t_Brick, "brick.jpg", &width_Brick, &height_Brick, &nrChannels_Brick);
+    load_texture(&t_Metal, "metal.jpg", &width_Metal, &height_Metal, &nrChannels_Metal);
+    load_texture(&t_Error, "error.jpg", &width_Error, &height_Error, &nrChannels_Error);
+    
     /*-------------------------------*/
+
+    glfwGetCursorPos(window, &xpos, &ypos);
+    xpos_prev = xpos;
+    ypos_prev = ypos;
 
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
@@ -164,13 +179,8 @@ int main(void)
         glClearColor(0.f, 0.f, 0.f, 0.f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        /*drawQuadri(0, 0,
-                   1, 0,
-                   0.7, 0.7,
-                   0, 1,
-                   0,
-                   0 ,1, 1);*/
         drawGround();
+        drawCeiling();
 
         float ray_direction;
         float ray_distance;
@@ -180,9 +190,20 @@ int main(void)
             //if (time-t>=1.) printf("[%f]", distanceToWall(playerX, playerY, ray_direction));
             
             ray_distance = distanceToWall(playerX, playerY, ray_direction);
-            current_side = get_side();
+            current_side = get_side(ray_x, ray_y);
 
-            drawWall(ray_distance, i);
+            if( map[ ((int)ray_y)*width_map + (int)ray_x ] == 1){
+                glBindTexture ( GL_TEXTURE_2D, t_Brick);
+            }
+            else if( map[ ((int)ray_y)*width_map + (int)ray_x ] == 2){
+                glBindTexture ( GL_TEXTURE_2D, t_Metal);
+            }
+            else {
+                glBindTexture ( GL_TEXTURE_2D, t_Error);
+            }
+
+            if (ray_distance < (float) (viewRange*tileLength))
+                drawWall(ray_distance, i);
         }
 
 
@@ -192,21 +213,14 @@ int main(void)
             t = time;
         }
 
+        /* Inputs */
         movement(window);
 
-        glEnable (GL_TEXTURE_2D);
-        glBegin(GL_QUADS);
-        //glColor3d(1, 0, 0);
-        glColor3f(1,1,1);
-        glTexCoord2f (0.0f,0.0f);
-        glVertex3f(0, 0, 0); // bottom left
-        glTexCoord2f (1.0f,0.0f);
-        glVertex3f(1, 0, 0); // bottom right
-        glTexCoord2f (1.0f,1.0f);
-        glVertex3f(0.8, 1, 0);// top right
-        glTexCoord2f (0.0f,1.0f);
-        glVertex3f(0.2, 1, 0); // top left
-        glEnd();
+        glfwGetCursorPos(window, &xpos, &ypos);
+        if(xpos!=xpos_prev){
+            direction += (float)(xpos-xpos_prev) * M_PI/100. * t_delta*25;
+            xpos_prev = xpos;
+        }
         
         /* Swap front and back buffers */
         glfwSwapBuffers(window);
@@ -285,7 +299,7 @@ float distanceToWall(float X, float Y, float castDirection){
         ray_x = X + ((float)d)/((float) nbPerTile)/tileLength * cosf(castDirection);
         ray_y = Y + ((float)d)/((float) nbPerTile)/tileLength * sinf(castDirection);
 
-        if ( map[ ((int)ray_y)*width + (int)ray_x ]){
+        if ( map[ ((int)ray_y)*width_map + (int)ray_x ]){
             float D = ((float)d)/((float) nbPerTile);
             //return ((float)d)/((float) nbPerTile);
             //return fabsf( sinf(direction+M_PI/2.f)*(x - playerX) - cosf(direction+M_PI/2.f)*(y - playerY)) * (float)tileLength;
@@ -296,73 +310,143 @@ float distanceToWall(float X, float Y, float castDirection){
     return (float) (viewRange*tileLength);
 }
 
+void drawWallTexture(float xL, float yB, 
+                     float xR, float yT,
+                     float z,
+                     float text_start, float text_end,
+                     C_color color){
+    
+    glEnable (GL_TEXTURE_2D);
+        glBegin(GL_QUADS);
+        glColor3f(color.r, color.g, color.b);
+        glTexCoord2f (text_start,0.0f);
+        glVertex3f(xL, yB, z); // bottom left
+        glTexCoord2f (text_end,0.0f);
+        glVertex3f(xR, yB, z); // bottom right
+        glTexCoord2f (text_end,1.0f);
+        glVertex3f(xR, yT, z);// top right
+        glTexCoord2f (text_start,1.0f);
+        glVertex3f(xL, yT, z); // top left
+    glEnd();
+
+}
+
 void drawWall(float distance, int n){
     float w = 2.f/(float)V_NBRAY;
-    float h = 2.f/distance*4.f;
+    float h = 2.f/distance*11.f;
     float xL = w*(float)n - 1.f;
     float xR = xL + w;
     float yB = -h/2.f;
     float yT = yB + h;
 
-    C_color c = {127.f / 255.f, 98.f / 255.f, 127.f / 255.f};
+    C_color c = C_white;
 
-    if (current_side == S_TOP)
+    float prop, prop_b;
+
+    if (current_side == S_TOP){
         c = C_darken(c, 0.8);
-    else if(current_side == S_LEFT)
+        prop = 1.f - (ray_x - (int)ray_x);
+        prop_b = prop+(1.f/256.f);
+    }
+    else if(current_side == S_LEFT){
         c = C_darken(c, 0.9);
-    else if(current_side == S_RIGHT)
+        prop = ray_y - (int)ray_y;
+        prop_b = prop+(1.f/256.f);
+    }
+    else if(current_side == S_RIGHT){
         c = C_darken(c, 0.9);
+        prop = 1.f - (ray_y - (int)ray_y);
+        prop_b = prop+(1.f/256.f);
+    }
+    else {
+        prop = ray_x - (int)ray_x;
+        prop_b = prop+(1.f/256.f);
+        //c = (C_color){prop_x, 1.0f, 0.0f};
+    }
 
-
+    c = C_darken(c, powf(1.f-(distance/(((float)viewRange-0.5f)*(float)tileLength)), 0.8) ) ;
+    drawWallTexture(xL, yB, xR, yT, 0.0f, prop, prop_b, c);
     //if ((int)distance<viewRange*tileLength)
-    drawQuadri(xL, yB,
+    /*drawQuadri(xL, yB,
             xL, yT,
             xR, yT,
             xR, yB,
             0.f,
-            C_darken(c, powf(1.f-(distance/(float)(viewRange*tileLength)), 0.8) ) );
+            C_darken(c, powf(1.f-(distance/(float)(viewRange*tileLength)), 0.8) ) );*/
 }
 
 void movement(GLFWwindow * window){
     int state;
-    state = glfwGetKey(window, GLFW_KEY_LEFT);
+    state = glfwGetKey(window, K_TURN_LEFT);
     if (state == GLFW_PRESS)
         direction -= M_PI/100. * t_delta*75;
 
-    state = glfwGetKey(window, GLFW_KEY_RIGHT);
+    state = glfwGetKey(window, K_TURN_RIGHT);
     if (state == GLFW_PRESS)
         direction += M_PI/100. * t_delta*75;
         
-    state = glfwGetKey(window, GLFW_KEY_UP);
-    if (state == GLFW_PRESS){
-        speedX = cosf(direction) * t_delta*2;
-        speedY = sinf(direction) * t_delta*2;
-    }    
+    //state = glfwGetKey(window, GLFW_KEY_UP);
+    int mv = 0;
 
-    state = glfwGetKey(window, GLFW_KEY_DOWN);
-    if (state == GLFW_PRESS){
-        speedX = -cosf(direction) * t_delta*2;
-        speedY = -sinf(direction) * t_delta*2;
+    if (glfwGetKey(window, K_UP) == GLFW_PRESS){
+        speedX += cosf(direction);
+        speedY += sinf(direction);
+        mv = 1;
+    }
+    if(glfwGetKey(window, K_DOWN) == GLFW_PRESS){
+        speedX += -cosf(direction);
+        speedY += -sinf(direction);
+        mv = 1;
+    }
+    if(glfwGetKey(window, K_LEFT) == GLFW_PRESS){
+        speedX += sinf(direction);
+        speedY += -cosf(direction);
+        mv = 1;
+    }
+    if(glfwGetKey(window, K_RIGHT) == GLFW_PRESS){
+        speedX += -sinf(direction);
+        speedY += cosf(direction);
+        mv = 1;
     }
 
-    speedX *= 0.85f;
-    speedY *= 0.85f;
+    /* Normalize */
+    float norm = sqrtf(speedX*speedX + speedY*speedY);
+    if(norm != 0){
+        speedX /= norm;
+        speedY /= norm;
+    }
 
-    if (map[ ((int)(playerY+speedY))*width + (int)(playerX+speedX) ] == 0){
+    speedX *= t_delta*2.f;
+    speedY *= t_delta*2.f;
+
+    if (map[ ((int)(playerY+speedY))*width_map + (int)(playerX+speedX) ] == 0){
         playerX += speedX;
         playerY += speedY;
     }
+    else {
+        float destination_X = playerX+speedX/100.f;
+        float destination_Y = playerY+speedY/100.f;
 
-    if ( fabsf(speedX)<=0.01f && fabsf(speedY)<=0.01f ){
+        enum side dest_side = get_side(destination_X, destination_Y);
+
+        if ( (dest_side == S_BOTTOM || dest_side == S_TOP) && ( map[((int)(playerY))*width_map + (int)(playerX+speedX) ] == 0 )){
+            playerX += speedX;
+        }
+        else if( (dest_side == S_LEFT || dest_side == S_RIGHT) && ( map[ (int)(playerY+speedY)*width_map + (int)(playerX) ] == 0 )){
+            playerY += speedY;
+        }
+    }
+
+    //if ( fabsf(speedX)<=0.01f && fabsf(speedY)<=0.01f ){
         speedX = 0.f;
         speedY = 0.f;
-    }
+    //}
     
 }
 
-enum side get_side(){
-    float x = ray_x - (int)ray_x;
-    float y = ray_y - (int)ray_y;
+enum side get_side(float X, float Y){
+    float x = X - (int)X;
+    float y = Y - (int)Y;
     float a1 = x*x + y*y;
     float a2 = (1-x)*(1-x) + y*y;
     float a3 = (1-x)*(1-x) + (1-y)*(1-y);
@@ -380,3 +464,44 @@ enum side get_side(){
         return S_TOP;
 }
 
+void drawGround(){
+    glDisable(GL_TEXTURE_2D);
+    glBegin(GL_TRIANGLES);
+        glColor3f(0, 0, 0);
+        glVertex3f(-1, 0, 0);
+        glColor3f(0, 0, 0);
+        glVertex3f(1, 0, 0);
+        glColor3f(0.2, 0.2, 0.2);
+        glVertex3f(-1, -1, 0);
+    glEnd();
+
+    glBegin(GL_TRIANGLES);
+        glColor3f(0, 0, 0);
+        glVertex3f(1, 0, 0);
+        glColor3f(0.2, 0.2, 0.2);
+        glVertex3f(-1, -1, 0);
+        glColor3f(0.2, 0.2, 0.2);
+        glVertex3f(1, -1, 0);
+    glEnd();
+}
+
+void drawCeiling(){
+    glDisable(GL_TEXTURE_2D);
+    glBegin(GL_TRIANGLES);
+        glColor3f(0, 0, 0);
+        glVertex3f(-1, 0, 0);
+        glColor3f(0, 0, 0);
+        glVertex3f(1, 0, 0);
+        glColor3f(0.2, 0.2, 0.2);
+        glVertex3f(-1, 1, 0);
+    glEnd();
+
+    glBegin(GL_TRIANGLES);
+        glColor3f(0, 0, 0);
+        glVertex3f(1, 0, 0);
+        glColor3f(0.2, 0.2, 0.2);
+        glVertex3f(-1, 1, 0);
+        glColor3f(0.2, 0.2, 0.2);
+        glVertex3f(1, 1, 0);
+    glEnd();
+}

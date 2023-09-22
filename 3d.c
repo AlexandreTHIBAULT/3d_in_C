@@ -78,6 +78,8 @@ float playerX = 2.5f;
 float playerY = 2.5f;
 float direction = M_PI*0.5f*-1.f;
 
+float playerZ = 0.f;
+
 float t_delta;
 
 int tileLength = 10;
@@ -336,8 +338,8 @@ void drawWall(float distance, int n){
     float h = 2.f/distance*11.f;
     float xL = w*(float)n - 1.f;
     float xR = xL + w;
-    float yB = -h/2.f;
-    float yT = yB + h;
+    float yB = -h/2.f - playerZ;
+    float yT = yB + h - playerZ;
 
     C_color c = C_white;
 
@@ -468,20 +470,20 @@ void drawGround(){
     glDisable(GL_TEXTURE_2D);
     glBegin(GL_TRIANGLES);
         glColor3f(0, 0, 0);
-        glVertex3f(-1, 0, 0);
+        glVertex3f(-1, 0.f-playerZ, 0);
         glColor3f(0, 0, 0);
-        glVertex3f(1, 0, 0);
+        glVertex3f(1, 0.f-playerZ, 0);
         glColor3f(0.2, 0.2, 0.2);
-        glVertex3f(-1, -1, 0);
+        glVertex3f(-1, -1.f, 0);
     glEnd();
 
     glBegin(GL_TRIANGLES);
         glColor3f(0, 0, 0);
-        glVertex3f(1, 0, 0);
+        glVertex3f(1, 0.f-playerZ, 0);
         glColor3f(0.2, 0.2, 0.2);
-        glVertex3f(-1, -1, 0);
+        glVertex3f(-1, -1.f, 0);
         glColor3f(0.2, 0.2, 0.2);
-        glVertex3f(1, -1, 0);
+        glVertex3f(1, -1.f, 0);
     glEnd();
 }
 
@@ -489,19 +491,19 @@ void drawCeiling(){
     glDisable(GL_TEXTURE_2D);
     glBegin(GL_TRIANGLES);
         glColor3f(0, 0, 0);
-        glVertex3f(-1, 0, 0);
+        glVertex3f(-1, 0.f-playerZ, 0);
         glColor3f(0, 0, 0);
-        glVertex3f(1, 0, 0);
+        glVertex3f(1, 0.f-playerZ, 0);
         glColor3f(0.2, 0.2, 0.2);
-        glVertex3f(-1, 1, 0);
+        glVertex3f(-1, 1.f, 0);
     glEnd();
 
     glBegin(GL_TRIANGLES);
         glColor3f(0, 0, 0);
-        glVertex3f(1, 0, 0);
+        glVertex3f(1, 0.f-playerZ, 0);
         glColor3f(0.2, 0.2, 0.2);
-        glVertex3f(-1, 1, 0);
+        glVertex3f(-1, 1.f, 0);
         glColor3f(0.2, 0.2, 0.2);
-        glVertex3f(1, 1, 0);
+        glVertex3f(1, 1.f, 0);
     glEnd();
 }

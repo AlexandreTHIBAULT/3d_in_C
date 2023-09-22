@@ -19,6 +19,7 @@
 #define K_RIGHT GLFW_KEY_D
 #define K_TURN_LEFT GLFW_KEY_Q
 #define K_TURN_RIGHT GLFW_KEY_E
+#define K_JUMP GLFW_KEY_SPACE
 
 enum side {
     S_RIGHT,
@@ -76,9 +77,16 @@ int map[] = {1,1,2,1,2,1,
 
 float playerX = 2.5f;
 float playerY = 2.5f;
+float playerZ = 0.f;
 float direction = M_PI*0.5f*-1.f;
 
-float playerZ = 0.f;
+int jump = 0;
+float t_jump_start = 0.f;
+
+const float z_max = 2.f;
+const float t2 = 1.f;
+const float jump_a = 4.f*z_max/3.f/(t2*t2);
+const float jump_b = jump_a * t2 * -1.f;
 
 float t_delta;
 
@@ -387,7 +395,7 @@ void movement(GLFWwindow * window){
     if (state == GLFW_PRESS)
         direction += M_PI/100. * t_delta*75;
         
-    //state = glfwGetKey(window, GLFW_KEY_UP);
+    // Movement
     int mv = 0;
 
     if (glfwGetKey(window, K_UP) == GLFW_PRESS){
@@ -443,6 +451,26 @@ void movement(GLFWwindow * window){
         speedX = 0.f;
         speedY = 0.f;
     //}
+
+    // Jump
+    float t_jump;
+    if( !jump && glfwGetKey(window, K_JUMP) == GLFW_PRESS ){
+        //printf("jump\n");
+        jump = 1;
+        t_jump_start = glfwGetTime();
+    }
+    else if (playerZ <= 0.0f && (glfwGetTime() - t_jump_start)>=t2){
+        jump = 0;
+        playerZ = 0.0f;
+    }
+    
+    if(jump){
+        t_jump = glfwGetTime() - t_jump_start;
+        //printf("%f | %f\n", t_jump, playerZ);
+        playerZ = (jump_a*t_jump*t_jump + jump_b*t_jump) * -1.f;
+    }
+
+    
     
 }
 

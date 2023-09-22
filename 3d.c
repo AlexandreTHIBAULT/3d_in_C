@@ -10,7 +10,7 @@
 #define W_WIDTH 768
 #define W_HEIGHT 432
 
-#define V_NBRAY 300
+#define V_NBRAY 200
 #define V_FOV (M_PI/2.f)
 
 #define K_UP GLFW_KEY_W
@@ -46,10 +46,9 @@ void drawQuadri(float x1, float y1,
 
 float distanceToWall(float X, float Y, float castDirection);
 
-void drawWallTexture(float xL, float yB, 
-                     float xR, float yT,
+void drawWallTexture(float xL, float yB, float xR, float yT,
                      float z,
-                     float text_start, float text_end,
+                     float texture_start, float texture_end,
                      C_color color);
 
 void drawWall(float distance, int n);
@@ -320,22 +319,21 @@ float distanceToWall(float X, float Y, float castDirection){
     return (float) (viewRange*tileLength);
 }
 
-void drawWallTexture(float xL, float yB, 
-                     float xR, float yT,
+void drawWallTexture(float xL, float yB, float xR, float yT,
                      float z,
-                     float text_start, float text_end,
+                     float texture_start, float texture_end,
                      C_color color){
     
     glEnable (GL_TEXTURE_2D);
         glBegin(GL_QUADS);
         glColor3f(color.r, color.g, color.b);
-        glTexCoord2f (text_start,0.0f);
+        glTexCoord2f (texture_start,0.0f);
         glVertex3f(xL, yB, z); // bottom left
-        glTexCoord2f (text_end,0.0f);
+        glTexCoord2f (texture_end,0.0f);
         glVertex3f(xR, yB, z); // bottom right
-        glTexCoord2f (text_end,1.0f);
+        glTexCoord2f (texture_end,1.0f);
         glVertex3f(xR, yT, z);// top right
-        glTexCoord2f (text_start,1.0f);
+        glTexCoord2f (texture_start,1.0f);
         glVertex3f(xL, yT, z); // top left
     glEnd();
 
@@ -469,8 +467,6 @@ void movement(GLFWwindow * window){
         //printf("%f | %f\n", t_jump, playerZ);
         playerZ = (jump_a*t_jump*t_jump + jump_b*t_jump) * -1.f;
     }
-
-    
     
 }
 

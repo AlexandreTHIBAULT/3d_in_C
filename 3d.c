@@ -2,6 +2,7 @@
 //#include <GL/gl.h>
 #include <stdio.h>
 #include <math.h>
+
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
@@ -57,8 +58,8 @@ void movement(GLFWwindow * window);
 
 enum side get_side(float X, float Y);
 
-void drawGround();
-void drawCeiling();
+void drawGround(C_color c);
+void drawCeiling(C_color c);
 
 int width_map = 6;
 int height_map = 11;
@@ -188,8 +189,10 @@ int main(void)
         glClearColor(0.f, 0.f, 0.f, 0.f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        drawGround();
-        drawCeiling();
+        C_color ground_c = {0.2, 0.2, 0.2};
+        C_color ceiling_c = {0.2, 0.2, 0.2};
+        drawGround(ground_c);
+        drawCeiling(ceiling_c);
 
         float ray_direction;
         float ray_distance;
@@ -490,44 +493,58 @@ enum side get_side(float X, float Y){
         return S_TOP;
 }
 
-void drawGround(){
+void drawGround(C_color c){ 
+    drawQuadri(-1, -1, 
+                1, -1,
+                1, -1.f-playerZ,
+                -1, -1.f-playerZ, 
+                0,
+                c);
+
     glDisable(GL_TEXTURE_2D);
     glBegin(GL_TRIANGLES);
         glColor3f(0, 0, 0);
         glVertex3f(-1, 0.f-playerZ, 0);
         glColor3f(0, 0, 0);
         glVertex3f(1, 0.f-playerZ, 0);
-        glColor3f(0.2, 0.2, 0.2);
-        glVertex3f(-1, -1.f, 0);
+        glColor3f(c.r, c.g, c.b);
+        glVertex3f(-1, -1.f-playerZ, 0);
     glEnd();
 
     glBegin(GL_TRIANGLES);
         glColor3f(0, 0, 0);
         glVertex3f(1, 0.f-playerZ, 0);
-        glColor3f(0.2, 0.2, 0.2);
-        glVertex3f(-1, -1.f, 0);
-        glColor3f(0.2, 0.2, 0.2);
-        glVertex3f(1, -1.f, 0);
+        glColor3f(c.r, c.g, c.b);
+        glVertex3f(-1, -1.f-playerZ, 0);
+        glColor3f(c.r, c.g, c.b);
+        glVertex3f(1, -1.f-playerZ, 0);
     glEnd();
 }
 
-void drawCeiling(){
+void drawCeiling(C_color c){
+    drawQuadri(-1, 1, 
+                1, 1,
+                1, 1.f-playerZ,
+                -1, 1.f-playerZ, 
+                0,
+                c);
+
     glDisable(GL_TEXTURE_2D);
     glBegin(GL_TRIANGLES);
         glColor3f(0, 0, 0);
         glVertex3f(-1, 0.f-playerZ, 0);
         glColor3f(0, 0, 0);
         glVertex3f(1, 0.f-playerZ, 0);
-        glColor3f(0.2, 0.2, 0.2);
-        glVertex3f(-1, 1.f, 0);
+        glColor3f(c.r, c.g, c.b);
+        glVertex3f(-1, 1.f-playerZ, 0);
     glEnd();
 
     glBegin(GL_TRIANGLES);
         glColor3f(0, 0, 0);
         glVertex3f(1, 0.f-playerZ, 0);
-        glColor3f(0.2, 0.2, 0.2);
-        glVertex3f(-1, 1.f, 0);
-        glColor3f(0.2, 0.2, 0.2);
-        glVertex3f(1, 1.f, 0);
+        glColor3f(c.r, c.g, c.b);
+        glVertex3f(-1, 1.f-playerZ, 0);
+        glColor3f(c.r, c.g, c.b);
+        glVertex3f(1, 1.f-playerZ, 0);
     glEnd();
 }

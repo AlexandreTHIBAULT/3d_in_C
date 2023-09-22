@@ -339,7 +339,7 @@ void drawWall(float distance, int n){
     float xL = w*(float)n - 1.f;
     float xR = xL + w;
     float yB = -h/2.f - playerZ;
-    float yT = yB + h - playerZ;
+    float yT = yB + h;
 
     C_color c = C_white;
 

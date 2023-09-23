@@ -7,6 +7,7 @@
 #include <stb_image.h>
 
 #include "color.h"
+#include "maze.h"
 
 #define W_WIDTH 768
 #define W_HEIGHT 432
@@ -21,6 +22,8 @@
 #define K_TURN_LEFT GLFW_KEY_Q
 #define K_TURN_RIGHT GLFW_KEY_E
 #define K_JUMP GLFW_KEY_SPACE
+
+#define SHOW_FPS
 
 enum side {
     S_RIGHT,
@@ -61,9 +64,9 @@ enum side get_side(float X, float Y);
 void drawGround(C_color c);
 void drawCeiling(C_color c);
 
-int width_map = 6;
-int height_map = 11;
-int map[] = {1,1,2,1,2,1,
+int width_map = M_W;
+int height_map = M_H;
+/*int map[] = {1,1,2,1,2,1,
              1,1,0,1,0,1,
              1,0,0,0,0,1,
              1,0,0,0,0,1,
@@ -73,7 +76,9 @@ int map[] = {1,1,2,1,2,1,
              1,0,0,1,0,1,
              1,0,0,2,2,1,
              1,0,0,0,0,1,
-             1,1,1,1,1,1};
+             1,1,1,1,1,1};*/
+
+int* map;
 
 float playerX = 2.5f;
 float playerY = 2.5f;
@@ -146,7 +151,7 @@ float modPI(float nb){
     while(nb>M_PI){
         nb -= M_PI * 2.f;
     }
-    while(nb<-M_PI){
+    while(nb<=-M_PI){
         nb += M_PI * 2.f;
     }
 
@@ -171,10 +176,10 @@ void drawCeilingTexture(){
         d_BR = sqrtf( ((float)(i_x+1) -playerX)*((float)(i_x+1) -playerX) + ((float)(i_y+1) -playerY)*((float)(i_y+1) -playerY) )   *tileLength;
         
        
-        a_TL = angleFromPosition(((float)i_x -playerX)*tileLength    , ((float)i_y -playerY)*tileLength    , d_TL) - modPI(direction);
-        a_TR = angleFromPosition(((float)(i_x+1) -playerX)*tileLength, ((float)i_y -playerY)*tileLength    , d_TR) - modPI(direction); 
-        a_BL = angleFromPosition(((float)i_x -playerX)*tileLength    , ((float)(i_y+1) -playerY)*tileLength, d_BL) - modPI(direction);
-        a_BR = angleFromPosition(((float)(i_x+1) -playerX)*tileLength, ((float)(i_y+1) -playerY)*tileLength, d_BR) - modPI(direction);
+        a_TL = angleFromPosition(((float)i_x -playerX)*tileLength    , ((float)i_y -playerY)*tileLength    , d_TL) - (direction);
+        a_TR = angleFromPosition(((float)(i_x+1) -playerX)*tileLength, ((float)i_y -playerY)*tileLength    , d_TR) - (direction); 
+        a_BL = angleFromPosition(((float)i_x -playerX)*tileLength    , ((float)(i_y+1) -playerY)*tileLength, d_BL) - (direction);
+        a_BR = angleFromPosition(((float)(i_x+1) -playerX)*tileLength, ((float)(i_y+1) -playerY)*tileLength, d_BR) - (direction);
 
         
         if (cosf(a_TL) > -0.78f && cosf(a_TR) > -0.78f && cosf(a_BL) > -0.78f && cosf(a_BR) > -0.78f){
@@ -253,6 +258,9 @@ int main(void)
 {
     GLFWwindow * window;
     double xpos, ypos, xpos_prev, ypos_prev;
+
+    map = makeMaze(&playerX, &playerY);
+    printMaze(map);
 
     /* Initialize the library */
     if (!glfwInit())
@@ -346,7 +354,9 @@ int main(void)
 
         if (time-t>=1.){
             //printf("%f | %f\n", direction, distanceToWall(playerX, playerY, direction));
-            printf("%.2f FPS\n", 1.f/t_delta);
+            #ifdef SHOW_FPS
+                printf("%.2f FPS\n", 1.f/t_delta);
+            #endif
             t = time;
         }
 
@@ -378,8 +388,10 @@ void error_callback(int error, const char* description)
 
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
         glfwSetWindowShouldClose(window, GLFW_TRUE);
+        free(map);
+    }
     /*else if (key == GLFW_KEY_RIGHT && (action == GLFW_REPEAT || action == GLFW_PRESS))
         direction += M_PI/100. * t_delta*50;
     else if (key == GLFW_KEY_LEFT && (action == GLFW_REPEAT || action == GLFW_PRESS))

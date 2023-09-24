@@ -1,13 +1,19 @@
+/********************/
+/* --- INCLUDES --- */
+/********************/
+
 #include <GLFW/glfw3.h>
 //#include <GL/gl.h>
 #include <stdio.h>
 #include <math.h>
-
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
-
 #include "color.h"
 #include "maze.h"
+
+/*******************/
+/* --- DEFINES --- */
+/*******************/
 
 #define W_WIDTH 768
 #define W_HEIGHT 432
@@ -24,6 +30,11 @@
 #define K_JUMP GLFW_KEY_SPACE
 
 #define SHOW_FPS
+#define RANDOM_MAP
+
+/*****************/
+/* --- TYPES --- */
+/*****************/
 
 enum side {
     S_RIGHT,
@@ -32,53 +43,63 @@ enum side {
     S_BOTTOM
 };
 
+/*********************/
+/* --- FUNCTIONS --- */
+/*********************/
+
 void error_callback(int error, const char* description);
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
-
 void drawTriangle(float x1, float y1, 
                   float x2, float y2,
                   float x3, float y3,
                   float z,
                   C_color color);
-
 void drawQuadri(float x1, float y1, 
                 float x2, float y2,
                 float x3, float y3,
                 float x4, float y4,
                 float z,
                 C_color color);
-
 float distanceToWall(float X, float Y, float castDirection);
-
 void drawWallTexture(float xL, float yB, float xR, float yT,
                      float z,
                      float texture_start, float texture_end,
                      C_color color);
-
 void drawWall(float distance, int n);
-
 void movement(GLFWwindow * window);
-
 enum side get_side(float X, float Y);
+float distanceToCenter(float x, float y);
+void load_texture(GLuint* texture, char* file_name, int* w, int* h, int* n);
+float angleFromPosition(float x, float y, float d);
+float modPI(float nb);
+void drawBackgroundTexture();
+int isPillar(float x, float y);
+float pillarRadius(float x, float y);
 
-void drawGround(C_color c);
-void drawCeiling(C_color c);
+/*********************/
+/* --- VARIABLES --- */
+/*********************/
 
-int width_map = M_W;
-int height_map = M_H;
-/*int map[] = {1,1,2,1,2,1,
-             1,1,0,1,0,1,
-             1,0,0,0,0,1,
-             1,0,0,0,0,1,
-             1,0,2,0,0,1,
-             1,0,0,0,2,1,
-             1,0,0,0,0,1,
-             1,0,0,1,0,1,
-             1,0,0,2,2,1,
-             1,0,0,0,0,1,
-             1,1,1,1,1,1};*/
-
-int* map;
+#ifndef RANDOM_MAP
+    int width_map = 6;
+    int height_map = 11;
+    int map[] = {1,1,2,1,2,1,
+                1,1,0,1,0,1,
+                1,0,0,0,0,1,
+                1,0,0,0,0,1,
+                1,0,2,0,0,1,
+                1,0,0,0,2,1,
+                1,0,3,0,0,1,
+                1,0,3,1,0,1,
+                1,0,0,2,2,1,
+                1,0,0,0,0,1,
+                1,1,1,1,1,1};
+#endif
+#ifdef RANDOM_MAP
+    int width_map = M_W;
+    int height_map = M_H;
+    int* map;
+#endif
 
 float playerX = 2.5f;
 float playerY = 2.5f;
@@ -106,6 +127,8 @@ float ray_y;
 
 float wall_height = 11.f;
 
+float pillar_3_radius = 0.33f;
+
 enum side current_side;
 
 GLuint t_Brick;
@@ -117,150 +140,19 @@ int width_Error, height_Error, nrChannels_Error;
 GLuint t_Soil;
 int width_Soil, height_Soil, nrChannels_Soil;
 
-void load_texture(GLuint* texture, char* file_name, int* w, int* h, int* n){
-    unsigned char *data ;
-    data = stbi_load(file_name, w, h, n, 0);
-
-    glEnable (GL_TEXTURE_2D);
-        glGenTextures(1, texture);
-        glBindTexture ( GL_TEXTURE_2D, *texture);
-        glTexEnvf ( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE , GL_MODULATE);
-        glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-        glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, *w, *h, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    glEnd();
-    stbi_image_free(data);
-}
-
-float angleFromPosition(float x, float y, float d){
-    float cos = x/d;
-    float sin = y/d;
-
-    if (sin > 0){
-        return acosf(cos);
-    }else{
-        return -acosf(cos);
-    }
-}
-
-float modPI(float nb){
-
-    while(nb>M_PI){
-        nb -= M_PI * 2.f;
-    }
-    while(nb<=-M_PI){
-        nb += M_PI * 2.f;
-    }
-
-    return nb;
-}
-
-void drawCeilingTexture(){
-    int x = (int) playerX;
-    int y = (int) playerY;
-
-    int R = viewRange;
-
-    for(int i_x=x-R; i_x<=x+R; i_x++){
-    for(int i_y=y-R; i_y<=y+R; i_y++){
-        
-        float d_TR, d_TL, d_BR, d_BL;
-        float a_TR, a_TL, a_BR, a_BL;
-
-        d_TL = sqrtf( ((float)i_x -playerX)*((float)i_x -playerX)         + ((float)i_y -playerY)*((float)i_y -playerY) )           *tileLength;
-        d_TR = sqrtf( ((float)(i_x+1) -playerX)*((float)(i_x+1) -playerX) + ((float)i_y -playerY)*((float)i_y -playerY) )           *tileLength;
-        d_BL = sqrtf( ((float)i_x -playerX)*((float)i_x -playerX)         + ((float)(i_y+1) -playerY)*((float)(i_y+1) -playerY) )   *tileLength;
-        d_BR = sqrtf( ((float)(i_x+1) -playerX)*((float)(i_x+1) -playerX) + ((float)(i_y+1) -playerY)*((float)(i_y+1) -playerY) )   *tileLength;
-        
-       
-        a_TL = angleFromPosition(((float)i_x -playerX)*tileLength    , ((float)i_y -playerY)*tileLength    , d_TL) - (direction);
-        a_TR = angleFromPosition(((float)(i_x+1) -playerX)*tileLength, ((float)i_y -playerY)*tileLength    , d_TR) - (direction); 
-        a_BL = angleFromPosition(((float)i_x -playerX)*tileLength    , ((float)(i_y+1) -playerY)*tileLength, d_BL) - (direction);
-        a_BR = angleFromPosition(((float)(i_x+1) -playerX)*tileLength, ((float)(i_y+1) -playerY)*tileLength, d_BR) - (direction);
-
-        
-        if (cosf(a_TL) > -0.78f && cosf(a_TR) > -0.78f && cosf(a_BL) > -0.78f && cosf(a_BR) > -0.78f){
-            float x_screen_TL = modPI(a_TL)/(V_FOV/2.f);
-            float x_screen_TR = modPI(a_TR)/(V_FOV/2.f);
-            float x_screen_BL = modPI(a_BL)/(V_FOV/2.f);
-            float x_screen_BR = modPI(a_BR)/(V_FOV/2.f);
-            
-            float d_TL_b = (d_TL*fabsf(cosf(a_TL)));
-            float d_TR_b = (d_TR*fabsf(cosf(a_TR)));
-            float d_BL_b = (d_BL*fabsf(cosf(a_BL)));
-            float d_BR_b = (d_BR*fabsf(cosf(a_BR)));
-
-            float y_screen_TL = (1.f/d_TL_b*wall_height) - playerZ / d_TL_b*wall_height;
-            float y_screen_TR = (1.f/d_TR_b*wall_height) - playerZ / d_TR_b*wall_height;
-            float y_screen_BL = (1.f/d_BL_b*wall_height) - playerZ / d_BL_b*wall_height;
-            float y_screen_BR = (1.f/d_BR_b*wall_height) - playerZ / d_BR_b*wall_height;
-
-            C_color c_TL = C_white;
-            C_color c_TR = C_white;
-            C_color c_BL = C_white;
-            C_color c_BR = C_white;
-            c_TL = C_darken(c_TL, powf(1.f-(d_TL_b/(((float)viewRange-0.5f)*(float)tileLength)), 0.8) ) ;
-            c_TR = C_darken(c_TR, powf(1.f-(d_TR_b/(((float)viewRange-0.5f)*(float)tileLength)), 0.8) ) ;
-            c_BL = C_darken(c_BL, powf(1.f-(d_BL_b/(((float)viewRange-0.5f)*(float)tileLength)), 0.8) ) ;
-            c_BR = C_darken(c_BR, powf(1.f-(d_BR_b/(((float)viewRange-0.5f)*(float)tileLength)), 0.8) ) ;
-
-            // CEILING
-            glBindTexture ( GL_TEXTURE_2D, t_Soil);
-            glEnable (GL_TEXTURE_2D);
-                glBegin(GL_QUADS);
-                glColor3f(c_BL.r, c_BL.g, c_BL.b);
-                glTexCoord2f (0.0f,0.0f);
-                glVertex3f(x_screen_BL, y_screen_BL, 0); // bottom left
-                glColor3f(c_BR.r, c_BR.g, c_BR.b);
-                glTexCoord2f (1.0f,0.0f);
-                glVertex3f(x_screen_BR, y_screen_BR, 0); // bottom right
-                glColor3f(c_TR.r, c_TR.g, c_TR.b);
-                glTexCoord2f (1.0f,1.0f);
-                glVertex3f(x_screen_TR, y_screen_TR, 0);// top right
-                glColor3f(c_TL.r, c_TL.g, c_TL.b);
-                glTexCoord2f (0.0f,1.0f);
-                glVertex3f(x_screen_TL, y_screen_TL, 0); // top left
-            glEnd();
-
-            y_screen_TL = -(1.f/d_TL_b*wall_height) - playerZ / d_TL_b*wall_height;
-            y_screen_TR = -(1.f/d_TR_b*wall_height) - playerZ / d_TR_b*wall_height;
-            y_screen_BL = -(1.f/d_BL_b*wall_height) - playerZ / d_BL_b*wall_height;
-            y_screen_BR = -(1.f/d_BR_b*wall_height) - playerZ / d_BR_b*wall_height;
-
-            // FLOOR
-            glBindTexture ( GL_TEXTURE_2D, t_Soil);
-            glEnable (GL_TEXTURE_2D);
-                glBegin(GL_QUADS);
-                glColor3f(c_BL.r, c_BL.g, c_BL.b);
-                glTexCoord2f (0.0f,0.0f);
-                glVertex3f(x_screen_BL, y_screen_BL, 0); // bottom left
-                glColor3f(c_BR.r, c_BR.g, c_BR.b);
-                glTexCoord2f (1.0f,0.0f);
-                glVertex3f(x_screen_BR, y_screen_BR, 0); // bottom right
-                glColor3f(c_TR.r, c_TR.g, c_TR.b);
-                glTexCoord2f (1.0f,1.0f);
-                glVertex3f(x_screen_TR, y_screen_TR, 0);// top right
-                glColor3f(c_TL.r, c_TL.g, c_TL.b);
-                glTexCoord2f (0.0f,1.0f);
-                glVertex3f(x_screen_TL, y_screen_TL, 0); // top left
-            glEnd();
-
-        }
-
-    }
-    }
-}
+/****************/
+/* --- MAIN --- */
+/****************/
 
 int main(void)
 {
     GLFWwindow * window;
     double xpos, ypos, xpos_prev, ypos_prev;
 
-    map = makeMaze(&playerX, &playerY);
-    printMaze(map);
+    #ifdef RANDOM_MAP
+        map = M_makeMaze(&playerX, &playerY);
+        M_printMaze(map);
+    #endif
 
     /* Initialize the library */
     if (!glfwInit())
@@ -323,9 +215,9 @@ int main(void)
 
         C_color ground_c = {0.2, 0.2, 0.2};
         C_color ceiling_c = {0.2, 0.2, 0.2};
-        drawGround(ground_c);
+        //drawGround(ground_c);
         //drawCeiling(ceiling_c);
-        drawCeilingTexture();
+        drawBackgroundTexture();
 
         float ray_direction;
         float ray_distance;
@@ -341,6 +233,9 @@ int main(void)
                 glBindTexture ( GL_TEXTURE_2D, t_Brick);
             }
             else if( map[ ((int)ray_y)*width_map + (int)ray_x ] == 2){
+                glBindTexture ( GL_TEXTURE_2D, t_Metal);
+            }
+            else if( map[ ((int)ray_y)*width_map + (int)ray_x ] == 3){
                 glBindTexture ( GL_TEXTURE_2D, t_Metal);
             }
             else {
@@ -390,7 +285,9 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 {
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
         glfwSetWindowShouldClose(window, GLFW_TRUE);
-        free(map);
+        #ifdef RANDOM_MAP
+            free(map);
+        #endif
     }
     /*else if (key == GLFW_KEY_RIGHT && (action == GLFW_REPEAT || action == GLFW_PRESS))
         direction += M_PI/100. * t_delta*50;
@@ -448,7 +345,13 @@ float distanceToWall(float X, float Y, float castDirection){
         ray_x = X + ((float)d)/((float) nbPerTile)/tileLength * cosf(castDirection);
         ray_y = Y + ((float)d)/((float) nbPerTile)/tileLength * sinf(castDirection);
 
-        if ( map[ ((int)ray_y)*width_map + (int)ray_x ]){
+        if (isPillar(ray_x, ray_y)){
+            if(distanceToCenter(ray_x, ray_y)<pillarRadius(ray_x, ray_y)){
+                float D = ((float)d)/((float) nbPerTile);
+                return D*cosf(direction-castDirection);
+            }
+        }
+        else if ( map[ ((int)ray_y)*width_map + (int)ray_x ]){
             float D = ((float)d)/((float) nbPerTile);
             //return ((float)d)/((float) nbPerTile);
             //return fabsf( sinf(direction+M_PI/2.f)*(x - playerX) - cosf(direction+M_PI/2.f)*(y - playerY)) * (float)tileLength;
@@ -567,7 +470,9 @@ void movement(GLFWwindow * window){
     speedX *= t_delta*2.f;
     speedY *= t_delta*2.f;
 
-    if (map[ ((int)(playerY+speedY))*width_map + (int)(playerX+speedX) ] == 0){
+    if (map[ ((int)(playerY+speedY))*width_map + (int)(playerX+speedX) ] == 0  
+    || (isPillar(playerX+speedX, playerY+speedY) && distanceToCenter(playerX+speedX, playerY+speedY)>=pillarRadius(playerX+speedX, playerY+speedY)) ){
+        
         playerX += speedX;
         playerY += speedY;
     }
@@ -630,62 +535,158 @@ enum side get_side(float X, float Y){
         return S_TOP;
 }
 
-void drawGround(C_color c){ 
-    float offset = playerZ;
-
-    drawQuadri(-1, -1, 
-                1, -1,
-                1, -1.f-playerZ,
-                -1, -1.f-playerZ, 
-                0,
-                c);
-
-    glDisable(GL_TEXTURE_2D);
-    glBegin(GL_TRIANGLES);
-        glColor3f(0, 0, 0);
-        glVertex3f(-1, 0.f, 0);
-        glColor3f(0, 0, 0);
-        glVertex3f(1, 0.f, 0);
-        glColor3f(c.r, c.g, c.b);
-        glVertex3f(-1, -1.f-offset, 0);
-    glEnd();
-
-    glBegin(GL_TRIANGLES);
-        glColor3f(0, 0, 0);
-        glVertex3f(1, 0.f, 0);
-        glColor3f(c.r, c.g, c.b);
-        glVertex3f(-1, -1.f-offset, 0);
-        glColor3f(c.r, c.g, c.b);
-        glVertex3f(1, -1.f-offset, 0);
-    glEnd();
+float distanceToCenter(float x, float y){
+    return sqrtf(  powf( (x - (float)((int)x)-0.5f ), 2) 
+                     + powf( (y - (float)((int)y)-0.5f ), 2) );
 }
 
-void drawCeiling(C_color c){
-    float offset = playerZ;
+void load_texture(GLuint* texture, char* file_name, int* w, int* h, int* n){
+    unsigned char *data ;
+    data = stbi_load(file_name, w, h, n, 0);
 
-    drawQuadri(-1, 1, 
-                1, 1,
-                1, 1.f-offset,
-                -1, 1.f-offset, 
-                0,
-                c);
-
-    glDisable(GL_TEXTURE_2D);
-    glBegin(GL_TRIANGLES);
-        glColor3f(0, 0, 0);
-        glVertex3f(-1, 0.f, 0);
-        glColor3f(0, 0, 0);
-        glVertex3f(1, 0.f, 0);
-        glColor3f(c.r, c.g, c.b);
-        glVertex3f(-1, 1.f-offset, 0);
+    glEnable (GL_TEXTURE_2D);
+        glGenTextures(1, texture);
+        glBindTexture ( GL_TEXTURE_2D, *texture);
+        glTexEnvf ( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE , GL_MODULATE);
+        glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+        glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, *w, *h, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
     glEnd();
+    stbi_image_free(data);
+}
 
-    glBegin(GL_TRIANGLES);
-        glColor3f(0, 0, 0);
-        glVertex3f(1, 0.f, 0);
-        glColor3f(c.r, c.g, c.b);
-        glVertex3f(-1, 1.f-offset, 0);
-        glColor3f(c.r, c.g, c.b);
-        glVertex3f(1, 1.f-offset, 0);
-    glEnd();
+float angleFromPosition(float x, float y, float d){
+    float cos = x/d;
+    float sin = y/d;
+
+    if (sin > 0){
+        return acosf(cos);
+    }else{
+        return -acosf(cos);
+    }
+}
+
+float modPI(float nb){
+
+    while(nb>M_PI){
+        nb -= M_PI * 2.f;
+    }
+    while(nb<=-M_PI){
+        nb += M_PI * 2.f;
+    }
+
+    return nb;
+}
+
+void drawBackgroundTexture(){
+    int x = (int) playerX;
+    int y = (int) playerY;
+
+    int R = viewRange;
+
+    for(int i_x=x-R; i_x<=x+R; i_x++){
+    for(int i_y=y-R; i_y<=y+R; i_y++){
+        
+        float d_TR, d_TL, d_BR, d_BL;
+        float a_TR, a_TL, a_BR, a_BL;
+
+        d_TL = sqrtf( ((float)i_x -playerX)*((float)i_x -playerX)         + ((float)i_y -playerY)*((float)i_y -playerY) )           *tileLength;
+        d_TR = sqrtf( ((float)(i_x+1) -playerX)*((float)(i_x+1) -playerX) + ((float)i_y -playerY)*((float)i_y -playerY) )           *tileLength;
+        d_BL = sqrtf( ((float)i_x -playerX)*((float)i_x -playerX)         + ((float)(i_y+1) -playerY)*((float)(i_y+1) -playerY) )   *tileLength;
+        d_BR = sqrtf( ((float)(i_x+1) -playerX)*((float)(i_x+1) -playerX) + ((float)(i_y+1) -playerY)*((float)(i_y+1) -playerY) )   *tileLength;
+        
+       
+        a_TL = angleFromPosition(((float)i_x -playerX)*tileLength    , ((float)i_y -playerY)*tileLength    , d_TL) - (direction);
+        a_TR = angleFromPosition(((float)(i_x+1) -playerX)*tileLength, ((float)i_y -playerY)*tileLength    , d_TR) - (direction); 
+        a_BL = angleFromPosition(((float)i_x -playerX)*tileLength    , ((float)(i_y+1) -playerY)*tileLength, d_BL) - (direction);
+        a_BR = angleFromPosition(((float)(i_x+1) -playerX)*tileLength, ((float)(i_y+1) -playerY)*tileLength, d_BR) - (direction);
+
+        
+        if (cosf(a_TL) > -0.78f && cosf(a_TR) > -0.78f && cosf(a_BL) > -0.78f && cosf(a_BR) > -0.78f){
+            float x_screen_TL = modPI(a_TL)/(V_FOV/2.f);
+            float x_screen_TR = modPI(a_TR)/(V_FOV/2.f);
+            float x_screen_BL = modPI(a_BL)/(V_FOV/2.f);
+            float x_screen_BR = modPI(a_BR)/(V_FOV/2.f);
+            
+            float d_TL_b = (d_TL*fabsf(cosf(a_TL)));
+            float d_TR_b = (d_TR*fabsf(cosf(a_TR)));
+            float d_BL_b = (d_BL*fabsf(cosf(a_BL)));
+            float d_BR_b = (d_BR*fabsf(cosf(a_BR)));
+
+            float y_screen_TL = (1.f/d_TL_b*wall_height) - playerZ / d_TL_b*wall_height;
+            float y_screen_TR = (1.f/d_TR_b*wall_height) - playerZ / d_TR_b*wall_height;
+            float y_screen_BL = (1.f/d_BL_b*wall_height) - playerZ / d_BL_b*wall_height;
+            float y_screen_BR = (1.f/d_BR_b*wall_height) - playerZ / d_BR_b*wall_height;
+
+            C_color c_TL = C_white;
+            C_color c_TR = C_white;
+            C_color c_BL = C_white;
+            C_color c_BR = C_white;
+            c_TL = C_darken(c_TL, powf(1.f-(d_TL_b/(((float)viewRange-0.5f)*(float)tileLength)), 0.8) ) ;
+            c_TR = C_darken(c_TR, powf(1.f-(d_TR_b/(((float)viewRange-0.5f)*(float)tileLength)), 0.8) ) ;
+            c_BL = C_darken(c_BL, powf(1.f-(d_BL_b/(((float)viewRange-0.5f)*(float)tileLength)), 0.8) ) ;
+            c_BR = C_darken(c_BR, powf(1.f-(d_BR_b/(((float)viewRange-0.5f)*(float)tileLength)), 0.8) ) ;
+
+            // CEILING
+            glBindTexture ( GL_TEXTURE_2D, t_Soil);
+            glEnable (GL_TEXTURE_2D);
+                glBegin(GL_QUADS);
+                glColor3f(c_BL.r, c_BL.g, c_BL.b);
+                glTexCoord2f (0.0f,0.0f);
+                glVertex3f(x_screen_BL, y_screen_BL, 0); // bottom left
+                glColor3f(c_BR.r, c_BR.g, c_BR.b);
+                glTexCoord2f (1.0f,0.0f);
+                glVertex3f(x_screen_BR, y_screen_BR, 0); // bottom right
+                glColor3f(c_TR.r, c_TR.g, c_TR.b);
+                glTexCoord2f (1.0f,1.0f);
+                glVertex3f(x_screen_TR, y_screen_TR, 0);// top right
+                glColor3f(c_TL.r, c_TL.g, c_TL.b);
+                glTexCoord2f (0.0f,1.0f);
+                glVertex3f(x_screen_TL, y_screen_TL, 0); // top left
+            glEnd();
+
+            y_screen_TL = -(1.f/d_TL_b*wall_height) - playerZ / d_TL_b*wall_height;
+            y_screen_TR = -(1.f/d_TR_b*wall_height) - playerZ / d_TR_b*wall_height;
+            y_screen_BL = -(1.f/d_BL_b*wall_height) - playerZ / d_BL_b*wall_height;
+            y_screen_BR = -(1.f/d_BR_b*wall_height) - playerZ / d_BR_b*wall_height;
+
+            // FLOOR
+            glBindTexture ( GL_TEXTURE_2D, t_Soil);
+            glEnable (GL_TEXTURE_2D);
+                glBegin(GL_QUADS);
+                glColor3f(c_BL.r, c_BL.g, c_BL.b);
+                glTexCoord2f (0.0f,0.0f);
+                glVertex3f(x_screen_BL, y_screen_BL, 0); // bottom left
+                glColor3f(c_BR.r, c_BR.g, c_BR.b);
+                glTexCoord2f (1.0f,0.0f);
+                glVertex3f(x_screen_BR, y_screen_BR, 0); // bottom right
+                glColor3f(c_TR.r, c_TR.g, c_TR.b);
+                glTexCoord2f (1.0f,1.0f);
+                glVertex3f(x_screen_TR, y_screen_TR, 0);// top right
+                glColor3f(c_TL.r, c_TL.g, c_TL.b);
+                glTexCoord2f (0.0f,1.0f);
+                glVertex3f(x_screen_TL, y_screen_TL, 0); // top left
+            glEnd();
+
+        }
+
+    }
+    }
+}
+
+int isPillar(float x, float y){
+    if ( map[ ((int)y)*width_map + (int)x ] == 3 ) {
+        return 1;
+    }
+
+    return 0;
+}
+
+float pillarRadius(float x, float y){
+    if ( map[ ((int)y)*width_map + (int)x ] == 3 ) {
+        return pillar_3_radius;
+    }
 }

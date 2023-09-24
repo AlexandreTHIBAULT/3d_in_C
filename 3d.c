@@ -11,14 +11,15 @@
 #include "color.h"
 #include "maze.h"
 
+
 /*******************/
 /* --- DEFINES --- */
 /*******************/
 
-#define W_WIDTH 768
-#define W_HEIGHT 432
+#define W_WIDTH 1152
+#define W_HEIGHT 648
 
-#define V_NBRAY 200
+#define V_NBRAY 300
 #define V_FOV (M_PI/2.f)
 
 #define K_UP GLFW_KEY_W
@@ -28,6 +29,8 @@
 #define K_TURN_LEFT GLFW_KEY_Q
 #define K_TURN_RIGHT GLFW_KEY_E
 #define K_JUMP GLFW_KEY_SPACE
+
+#define F_NB_MAX_MONSTER 10
 
 #define SHOW_FPS
 #define RANDOM_MAP
@@ -42,6 +45,12 @@ enum side {
     S_LEFT,
     S_BOTTOM
 };
+
+typedef struct monster
+{
+    float x;
+    float y;
+} F_monster;
 
 /*********************/
 /* --- FUNCTIONS --- */
@@ -60,11 +69,13 @@ void drawQuadri(float x1, float y1,
                 float x4, float y4,
                 float z,
                 C_color color);
+float isSeeingMonster(float X, float Y, float castDirection, int monster);
 float distanceToWall(float X, float Y, float castDirection);
 void drawWallTexture(float xL, float yB, float xR, float yT,
                      float z,
                      float texture_start, float texture_end,
                      C_color color);
+void drawMonster(float distance, int n);
 void drawWall(float distance, int n);
 void movement(GLFWwindow * window);
 enum side get_side(float X, float Y);
@@ -139,6 +150,63 @@ GLuint t_Error;
 int width_Error, height_Error, nrChannels_Error;
 GLuint t_Soil;
 int width_Soil, height_Soil, nrChannels_Soil;
+GLuint t_Tank;
+int width_Tank, height_Tank, nrChannels_Tank;
+GLuint t_Monster;
+int width_Monster, height_Monster, nrChannels_Monster;
+
+F_monster monsters[F_NB_MAX_MONSTER];
+int nb_monster = 1;
+float prop_cur_monster;
+
+void drawMap(){
+    float square_size_x = 0.015f;
+    float square_size_y = square_size_x / W_HEIGHT * W_WIDTH;
+
+    float map_start_x = square_size_x*3 - 1.f;
+    float map_start_y = 1.f - square_size_y;
+
+    glEnable(GL_BLEND); //Enable blending.
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); //Set blending function.
+
+    for(int i_x=0; i_x<width_map ; i_x++){
+    for(int i_y=0; i_y<height_map; i_y++){
+
+        if (map[ i_y*width_map + i_x ]!=1){
+            glDisable (GL_TEXTURE_2D);
+            glBegin(GL_QUADS);
+                //glColor3f(1, 1, 1);
+                glColor4f(1, 1, 1 ,0.2);
+                glTexCoord2f (0.0f,0.0f);
+                glVertex3f(map_start_x+square_size_x*i_x, map_start_y -square_size_y*i_y, 0); // bottom left
+                glTexCoord2f (1.0f,0.0f);
+                glVertex3f(map_start_x+square_size_x +square_size_x*i_x, map_start_y -square_size_y*i_y, 0); // bottom right
+                glTexCoord2f (1.0f,1.0f);
+                glVertex3f(map_start_x+square_size_x +square_size_x*i_x, map_start_y-square_size_y -square_size_y*i_y, 0);// top right
+                glTexCoord2f (0.0f,1.0f);
+                glVertex3f(map_start_x +square_size_x*i_x, map_start_y-square_size_y -square_size_y*i_y, 0); // top left
+            glEnd();
+        }
+
+    }
+    }
+    glDisable(GL_BLEND);
+
+    glDisable (GL_TEXTURE_2D);
+    glBegin(GL_QUADS);
+        glColor3f(1, 0, 0);
+        glTexCoord2f (0.0f,0.0f);
+        glVertex3f(map_start_x                 +square_size_x*playerX -square_size_x/4, map_start_y                 -square_size_y*playerY +square_size_y/4, 0); // bottom left
+        glTexCoord2f (1.0f,0.0f);
+        glVertex3f(map_start_x+square_size_x/2 +square_size_x*playerX -square_size_x/4, map_start_y                 -square_size_y*playerY +square_size_y/4, 0); // bottom right
+        glTexCoord2f (1.0f,1.0f);
+        glVertex3f(map_start_x+square_size_x/2 +square_size_x*playerX -square_size_x/4, map_start_y-square_size_y/2 -square_size_y*playerY +square_size_y/4, 0);// top right
+        glTexCoord2f (0.0f,1.0f);
+        glVertex3f(map_start_x                 +square_size_x*playerX -square_size_x/4, map_start_y-square_size_y/2 -square_size_y*playerY +square_size_y/4, 0); // top left
+    glEnd();
+
+    
+}
 
 /****************/
 /* --- MAIN --- */
@@ -162,6 +230,7 @@ int main(void)
     glfwSetErrorCallback(error_callback);
 
     glfwWindowHint(GLFW_SAMPLES, 4);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
     /* Create a windowed mode window and its OpenGL context */
     window = glfwCreateWindow(W_WIDTH, W_HEIGHT, "Hello World", NULL, NULL);
@@ -184,12 +253,20 @@ int main(void)
     double time = glfwGetTime();
     
 
-    /* LOAD TEXTURE*/
+    /* LOAD TEXTURE */
     load_texture(&t_Brick, "brick.jpg", &width_Brick, &height_Brick, &nrChannels_Brick);
     load_texture(&t_Metal, "metal.jpg", &width_Metal, &height_Metal, &nrChannels_Metal);
     load_texture(&t_Error, "error.jpg", &width_Error, &height_Error, &nrChannels_Error);
-    load_texture(&t_Soil, "soil.jpg", &width_Soil, &height_Soil, &nrChannels_Soil);
+    load_texture(&t_Soil , "soil.jpg" , &width_Soil , &height_Soil , &nrChannels_Soil );
+    load_texture(&t_Tank , "tank.jpg" , &width_Tank , &height_Tank , &nrChannels_Tank );
+    load_texture(&t_Monster , "monster.jpg" , &width_Monster , &height_Monster , &nrChannels_Monster );
     
+    /* SETUP MONSTERS */
+    F_monster m = {playerX-1.f, playerY-1.f};
+    monsters[0] = m;
+
+    //map[(int)monsters[0].y * width_map + (int)monsters[0].x] = 7;
+
     /*-------------------------------*/
 
     glfwGetCursorPos(window, &xpos, &ypos);
@@ -229,6 +306,9 @@ int main(void)
             ray_distance = distanceToWall(playerX, playerY, ray_direction);
             current_side = get_side(ray_x, ray_y);
 
+            float m_dist = isSeeingMonster(playerX, playerY, ray_direction, 0);
+            if( m_dist ) printf("YES %d\n", i);
+
             if( map[ ((int)ray_y)*width_map + (int)ray_x ] == 1){
                 glBindTexture ( GL_TEXTURE_2D, t_Brick);
             }
@@ -236,7 +316,7 @@ int main(void)
                 glBindTexture ( GL_TEXTURE_2D, t_Metal);
             }
             else if( map[ ((int)ray_y)*width_map + (int)ray_x ] == 3){
-                glBindTexture ( GL_TEXTURE_2D, t_Metal);
+                glBindTexture ( GL_TEXTURE_2D, t_Tank);
             }
             else {
                 glBindTexture ( GL_TEXTURE_2D, t_Error);
@@ -244,8 +324,12 @@ int main(void)
 
             if (ray_distance < (float) (viewRange*tileLength))
                 drawWall(ray_distance, i);
-        }
+            
+            glBindTexture ( GL_TEXTURE_2D, t_Monster);
+            if (m_dist && m_dist<ray_distance)
+                drawMonster(m_dist, i);
 
+        }
 
         if (time-t>=1.){
             //printf("%f | %f\n", direction, distanceToWall(playerX, playerY, direction));
@@ -254,6 +338,8 @@ int main(void)
             #endif
             t = time;
         }
+        
+        drawMap();
 
         /* Inputs */
         movement(window);
@@ -338,6 +424,42 @@ void drawQuadri(float x1, float y1,
     );
 }
 
+float isSeeingMonster(float X, float Y, float castDirection, int monster){
+    float d = sqrtf(  powf( (X - monsters[monster].x ), 2) 
+                    + powf( (Y - monsters[monster].y ), 2) );
+    float cos = (monsters[monster].x - X)/d;
+    float sin = (monsters[monster].y - Y)/d;
+
+    if( cos*cosf(castDirection )+ sin*sinf(castDirection) < 0 ){
+        return 0.f;
+    }
+    
+    float a = tanf(castDirection);
+    float b = Y-a*X;
+
+    float angle = angleFromPosition(monsters[monster].x - X, monsters[monster].y - Y, d);
+
+    float ap = tanf(castDirection-(M_1_PI/2.f));
+    float bp = monsters[monster].y-ap*monsters[monster].x;
+
+    float inters_x = -(bp-b)/(ap-a);
+    float inters_y = a*inters_x+b;
+
+    if (sqrtf(  powf( (inters_x - monsters[monster].x ), 2) 
+                   + powf( (inters_y - monsters[monster].y ), 2) ) > 3.f)
+        return 0.f;
+
+    prop_cur_monster = 1.f/2.f - (sqrtf(  powf( (inters_x - monsters[monster].x ), 2) 
+                              + powf( (inters_y - monsters[monster].y ), 2) )) /6.f;
+
+    d = sqrtf(  powf( (X - monsters[monster].x ), 2) 
+              + powf( (Y - monsters[monster].y ), 2) );
+
+    //float D = ((float)d);
+    return d*cosf(direction-castDirection) * tileLength;
+    
+}
+
 float distanceToWall(float X, float Y, float castDirection){
     //float x, y;
     int nbPerTile = 100;
@@ -370,15 +492,37 @@ void drawWallTexture(float xL, float yB, float xR, float yT,
     glEnable (GL_TEXTURE_2D);
         glBegin(GL_QUADS);
         glColor3f(color.r, color.g, color.b);
-        glTexCoord2f (texture_start,0.0f);
-        glVertex3f(xL, yB, z); // bottom left
-        glTexCoord2f (texture_end,0.0f);
-        glVertex3f(xR, yB, z); // bottom right
-        glTexCoord2f (texture_end,1.0f);
-        glVertex3f(xR, yT, z);// top right
         glTexCoord2f (texture_start,1.0f);
+        glVertex3f(xL, yB, z); // bottom left
+        glTexCoord2f (texture_end,1.0f);
+        glVertex3f(xR, yB, z); // bottom right
+        glTexCoord2f (texture_end,0.0f);
+        glVertex3f(xR, yT, z);// top right
+        glTexCoord2f (texture_start,0.0f);
         glVertex3f(xL, yT, z); // top left
     glEnd();
+
+}
+
+void drawMonster(float distance, int n){
+    float w = 2.f/(float)V_NBRAY;
+    float h = 2.f/distance*wall_height;
+    float xL = w*(float)n - 1.f;
+    float xR = xL + w;
+    float yB = -h/2.f - playerZ / distance*wall_height ;
+    float yT = yB + h;
+
+    C_color c = C_white;
+
+    float prop, prop_b;
+
+   
+    prop = prop_cur_monster;
+    prop_b = prop_cur_monster;
+    
+
+    c = C_darken(c, powf(1.f-(distance/(((float)viewRange-0.5f)*(float)tileLength)), 0.8) ) ;
+    drawWallTexture(xL, yB, xR, yT, 0.0f, prop, prop_b, c);
 
 }
 
@@ -394,18 +538,20 @@ void drawWall(float distance, int n){
 
     float prop, prop_b;
 
+   
+
     if (current_side == S_TOP){
-        c = C_darken(c, 0.8);
+        if(!isPillar(ray_x, ray_y)) c = C_darken(c, 0.8);
         prop = 1.f - (ray_x - (int)ray_x);
         prop_b = prop+(1.f/256.f);
     }
     else if(current_side == S_LEFT){
-        c = C_darken(c, 0.9);
+        if(!isPillar(ray_x, ray_y)) c = C_darken(c, 0.9);
         prop = ray_y - (int)ray_y;
         prop_b = prop+(1.f/256.f);
     }
     else if(current_side == S_RIGHT){
-        c = C_darken(c, 0.9);
+        if(!isPillar(ray_x, ray_y)) c = C_darken(c, 0.9);
         prop = 1.f - (ray_y - (int)ray_y);
         prop_b = prop+(1.f/256.f);
     }
@@ -414,7 +560,8 @@ void drawWall(float distance, int n){
         prop_b = prop+(1.f/256.f);
         //c = (C_color){prop_x, 1.0f, 0.0f};
     }
-
+    
+    prop_b = prop;
     c = C_darken(c, powf(1.f-(distance/(((float)viewRange-0.5f)*(float)tileLength)), 0.8) ) ;
     drawWallTexture(xL, yB, xR, yT, 0.0f, prop, prop_b, c);
     //if ((int)distance<viewRange*tileLength)

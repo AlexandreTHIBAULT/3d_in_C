@@ -30,7 +30,8 @@
 #define K_TURN_RIGHT GLFW_KEY_E
 #define K_JUMP GLFW_KEY_SPACE
 
-#define F_NB_MAX_MONSTER 10
+#define O_NB_MAX_MONSTERS 10
+#define O_NB_MAX_OBJECTS 255
 
 #define SHOW_FPS
 #define RANDOM_MAP
@@ -46,11 +47,20 @@ enum side {
     S_BOTTOM
 };
 
-typedef struct monster
+typedef struct texture
+{
+    GLuint image;
+    int width;
+    int height;
+    int nrChannels;
+} T_texture;
+
+typedef struct object
 {
     float x;
     float y;
-} F_monster;
+    T_texture texture;
+} O_objects;
 
 /*********************/
 /* --- FUNCTIONS --- */
@@ -69,18 +79,19 @@ void drawQuadri(float x1, float y1,
                 float x4, float y4,
                 float z,
                 C_color color);
-float isSeeingMonster(float X, float Y, float castDirection, int monster);
+float isSeeingObject(float X, float Y, float castDirection, int monster);
+void addObjectToDrawQueue(int queue[], int m, int nbMonster);
 float distanceToWall(float X, float Y, float castDirection);
 void drawWallTexture(float xL, float yB, float xR, float yT,
                      float z,
                      float texture_start, float texture_end,
                      C_color color);
-void drawMonster(float distance, int n);
+void drawMonster(float distance, int n, int monster);
 void drawWall(float distance, int n);
 void movement(GLFWwindow * window);
 enum side get_side(float X, float Y);
 float distanceToCenter(float x, float y);
-void load_texture(GLuint* texture, char* file_name, int* w, int* h, int* n);
+void load_texture(T_texture* texture, char* file_name);
 float angleFromPosition(float x, float y, float d);
 float modPI(float nb);
 void drawBackgroundTexture();
@@ -142,7 +153,17 @@ float pillar_3_radius = 0.33f;
 
 enum side current_side;
 
-GLuint t_Brick;
+T_texture t_Brick;
+T_texture t_Metal;
+T_texture t_Error;
+T_texture t_Soil;
+T_texture t_Soil2;
+T_texture t_Tank;
+T_texture t_Monster;
+T_texture t_Chain;
+T_texture t_Chain2;
+
+/*GLuint t_Brick;
 int width_Brick, height_Brick, nrChannels_Brick;
 GLuint t_Metal;
 int width_Metal, height_Metal, nrChannels_Metal;
@@ -154,10 +175,19 @@ GLuint t_Tank;
 int width_Tank, height_Tank, nrChannels_Tank;
 GLuint t_Monster;
 int width_Monster, height_Monster, nrChannels_Monster;
+GLuint t_Chain;
+int width_Chain, height_Chain, nrChannels_Chain;*/
 
-F_monster monsters[F_NB_MAX_MONSTER];
-int nb_monster = 1;
-float prop_cur_monster;
+/*
+O_objects monsters[O_NB_MAX_MONSTERS];
+float monsters_prop[O_NB_MAX_MONSTERS];
+float monsters_dist[O_NB_MAX_MONSTERS];
+int nb_monster;*/
+
+O_objects objects[O_NB_MAX_OBJECTS];
+float objects_prop[O_NB_MAX_OBJECTS];
+float objects_dist[O_NB_MAX_OBJECTS];
+int nb_oject;
 
 void drawMap(){
     float square_size_x = 0.015f;
@@ -208,6 +238,29 @@ void drawMap(){
     
 }
 
+int O_isValidPosition(int* map, float x, float y){
+    return map[ (int)(y)*width_map + (int)(x) ]==0;
+}
+
+void O_addObjects(int* map){
+    int nbChain = 20;
+    
+    for(int i=0; i<nbChain; i++){
+        float x=0;
+        float y=0;
+        while(!O_isValidPosition(map, x, y)){
+            x = (float)randMinMax(1, (width_map-1) *5) / 5.f;
+            y = (float)randMinMax(1, (height_map-1)*5) / 5.f;
+        }
+        O_objects chain = {x, y, randMinMax(0, 2)==1?t_Chain:t_Chain2};
+
+        
+        objects[i] = chain;
+    }
+    
+    nb_oject = nbChain;
+}
+
 /****************/
 /* --- MAIN --- */
 /****************/
@@ -217,10 +270,7 @@ int main(void)
     GLFWwindow * window;
     double xpos, ypos, xpos_prev, ypos_prev;
 
-    #ifdef RANDOM_MAP
-        map = M_makeMaze(&playerX, &playerY);
-        M_printMaze(map);
-    #endif
+   
 
     /* Initialize the library */
     if (!glfwInit())
@@ -254,17 +304,38 @@ int main(void)
     
 
     /* LOAD TEXTURE */
-    load_texture(&t_Brick, "brick.jpg", &width_Brick, &height_Brick, &nrChannels_Brick);
+    /*load_texture(&t_Brick, "brick.jpg", &width_Brick, &height_Brick, &nrChannels_Brick);
     load_texture(&t_Metal, "metal.jpg", &width_Metal, &height_Metal, &nrChannels_Metal);
     load_texture(&t_Error, "error.jpg", &width_Error, &height_Error, &nrChannels_Error);
     load_texture(&t_Soil , "soil.jpg" , &width_Soil , &height_Soil , &nrChannels_Soil );
     load_texture(&t_Tank , "tank.jpg" , &width_Tank , &height_Tank , &nrChannels_Tank );
-    load_texture(&t_Monster , "monster.jpg" , &width_Monster , &height_Monster , &nrChannels_Monster );
-    
-    /* SETUP MONSTERS */
-    F_monster m = {playerX-1.f, playerY-1.f};
-    monsters[0] = m;
+    load_texture(&t_Monster , "monster.png" , &width_Monster , &height_Monster , &nrChannels_Monster );
+    load_texture(&t_Chain , "chain.png" , &width_Chain , &height_Chain , &nrChannels_Chain );*/
 
+    load_texture(&t_Brick   , "brick.jpg"   );
+    load_texture(&t_Metal   , "metal.jpg"   );
+    load_texture(&t_Error   , "error.jpg"   );
+    load_texture(&t_Soil    , "soil.jpg"    );
+    load_texture(&t_Soil2   , "soil2.jpg"    );
+    load_texture(&t_Tank    , "tank.jpg"    );
+    load_texture(&t_Monster , "monster.png" );
+    load_texture(&t_Chain   , "chain.png"   );
+    load_texture(&t_Chain2  , "chain2.png"   );
+    
+
+    #ifdef RANDOM_MAP
+        map = M_makeMaze(&playerX, &playerY);
+        M_printMaze(map);
+        O_addObjects(map);
+    #endif
+    /* SETUP MONSTERS */
+    /*O_objects m = {playerX-1.f, playerY-1.f, t_Monster};
+    O_objects m2 = {playerX-1.f*2, playerY-1.f*2, t_Monster};
+    O_objects m3 = {playerX+1.f, playerY+1.f, t_Monster};
+    monsters[0] = m;
+    monsters[1] = m2;
+    monsters[2] = m3;
+    nb_monster = 3;*/
     //map[(int)monsters[0].y * width_map + (int)monsters[0].x] = 7;
 
     /*-------------------------------*/
@@ -272,6 +343,11 @@ int main(void)
     glfwGetCursorPos(window, &xpos, &ypos);
     xpos_prev = xpos;
     ypos_prev = ypos;
+
+    int queue_objects[O_NB_MAX_OBJECTS];
+    for(int i=0; i<O_NB_MAX_OBJECTS; i++){
+        queue_objects[i] = 0;
+    }
 
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
@@ -306,28 +382,53 @@ int main(void)
             ray_distance = distanceToWall(playerX, playerY, ray_direction);
             current_side = get_side(ray_x, ray_y);
 
-            float m_dist = isSeeingMonster(playerX, playerY, ray_direction, 0);
-            if( m_dist ) printf("YES %d\n", i);
+            for(int i=0; i<O_NB_MAX_OBJECTS; i++){
+                queue_objects[i] = 0;
+            }
+
+            int nb_objects_visible = 0;
+            for(int k = 0; k<nb_oject; k++){
+                objects_dist[k] = isSeeingObject(playerX, playerY, ray_direction, k);
+                if(nb_objects_visible!=0 && objects_dist[k]){
+                    addObjectToDrawQueue(queue_objects, k, nb_objects_visible);
+                    nb_objects_visible ++;
+                }
+                else if(objects_dist[k]){
+                    queue_objects[0] = k;
+                    nb_objects_visible ++;
+                }
+            }
+
+            //monsters_dist[0] = isSeeingObject(playerX, playerY, ray_direction, 0);
+            //monsters_dist[1] = isSeeingObject(playerX, playerY, ray_direction, 1);
 
             if( map[ ((int)ray_y)*width_map + (int)ray_x ] == 1){
-                glBindTexture ( GL_TEXTURE_2D, t_Brick);
+                glBindTexture ( GL_TEXTURE_2D, t_Brick.image);
             }
             else if( map[ ((int)ray_y)*width_map + (int)ray_x ] == 2){
-                glBindTexture ( GL_TEXTURE_2D, t_Metal);
+                glBindTexture ( GL_TEXTURE_2D, t_Metal.image);
             }
             else if( map[ ((int)ray_y)*width_map + (int)ray_x ] == 3){
-                glBindTexture ( GL_TEXTURE_2D, t_Tank);
+                glBindTexture ( GL_TEXTURE_2D, t_Tank.image);
             }
             else {
-                glBindTexture ( GL_TEXTURE_2D, t_Error);
+                glBindTexture ( GL_TEXTURE_2D, t_Error.image);
             }
 
             if (ray_distance < (float) (viewRange*tileLength))
                 drawWall(ray_distance, i);
             
-            glBindTexture ( GL_TEXTURE_2D, t_Monster);
-            if (m_dist && m_dist<ray_distance)
-                drawMonster(m_dist, i);
+
+            
+            glEnable(GL_BLEND); //Enable blending.
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); //Set blending function.
+
+            for(int k=0; k<nb_objects_visible; k++){
+                int m = queue_objects[k];
+                if (objects_dist[m] && objects_dist[m]<ray_distance)
+                    drawMonster(objects_dist[m], i, m);
+            }
+            
 
         }
 
@@ -343,7 +444,7 @@ int main(void)
 
         /* Inputs */
         movement(window);
-
+        
         glfwGetCursorPos(window, &xpos, &ypos);
         if(xpos!=xpos_prev){
             direction += (float)(xpos-xpos_prev) * M_PI/100. * t_delta*25;
@@ -424,11 +525,11 @@ void drawQuadri(float x1, float y1,
     );
 }
 
-float isSeeingMonster(float X, float Y, float castDirection, int monster){
-    float d = sqrtf(  powf( (X - monsters[monster].x ), 2) 
-                    + powf( (Y - monsters[monster].y ), 2) );
-    float cos = (monsters[monster].x - X)/d;
-    float sin = (monsters[monster].y - Y)/d;
+float isSeeingObject(float X, float Y, float castDirection, int monster){
+    float d = sqrtf(  powf( (X - objects[monster].x ), 2) 
+                    + powf( (Y - objects[monster].y ), 2) );
+    float cos = (objects[monster].x - X)/d;
+    float sin = (objects[monster].y - Y)/d;
 
     if( cos*cosf(castDirection )+ sin*sinf(castDirection) < 0 ){
         return 0.f;
@@ -437,27 +538,39 @@ float isSeeingMonster(float X, float Y, float castDirection, int monster){
     float a = tanf(castDirection);
     float b = Y-a*X;
 
-    float angle = angleFromPosition(monsters[monster].x - X, monsters[monster].y - Y, d);
+    float angle = angleFromPosition(objects[monster].x - X, objects[monster].y - Y, d);
 
     float ap = tanf(castDirection-(M_1_PI/2.f));
-    float bp = monsters[monster].y-ap*monsters[monster].x;
+    float bp = objects[monster].y-ap*objects[monster].x;
 
     float inters_x = -(bp-b)/(ap-a);
     float inters_y = a*inters_x+b;
 
-    if (sqrtf(  powf( (inters_x - monsters[monster].x ), 2) 
-                   + powf( (inters_y - monsters[monster].y ), 2) ) > 3.f)
+    if (sqrtf(  powf( (inters_x - objects[monster].x ), 2) 
+                   + powf( (inters_y - objects[monster].y ), 2) ) > 3.f)
         return 0.f;
 
-    prop_cur_monster = 1.f/2.f - (sqrtf(  powf( (inters_x - monsters[monster].x ), 2) 
-                              + powf( (inters_y - monsters[monster].y ), 2) )) /6.f;
+    objects_prop[monster] = 1.f/2.f - (sqrtf(  powf( (inters_x - objects[monster].x ), 2) 
+                              + powf( (inters_y - objects[monster].y ), 2) )) /6.f;
 
-    d = sqrtf(  powf( (X - monsters[monster].x ), 2) 
-              + powf( (Y - monsters[monster].y ), 2) );
+    d = sqrtf(  powf( (X - objects[monster].x ), 2) 
+              + powf( (Y - objects[monster].y ), 2) );
 
     //float D = ((float)d);
     return d*cosf(direction-castDirection) * tileLength;
     
+}
+
+void addObjectToDrawQueue(int queue[], int m, int nbObject){
+    int place = 0;
+    while( objects_dist[ queue[place] ] > objects_dist[m] && place<nbObject){
+        place ++;
+    }
+
+    for(int i = nbObject; i>place; i--){
+        queue[i] = queue[i-1];
+    }
+    queue[place] = m;
 }
 
 float distanceToWall(float X, float Y, float castDirection){
@@ -504,7 +617,7 @@ void drawWallTexture(float xL, float yB, float xR, float yT,
 
 }
 
-void drawMonster(float distance, int n){
+void drawMonster(float distance, int n, int monster){
     float w = 2.f/(float)V_NBRAY;
     float h = 2.f/distance*wall_height;
     float xL = w*(float)n - 1.f;
@@ -517,11 +630,13 @@ void drawMonster(float distance, int n){
     float prop, prop_b;
 
    
-    prop = prop_cur_monster;
-    prop_b = prop_cur_monster;
+    prop = objects_prop[monster];
+    prop_b = prop;
     
 
     c = C_darken(c, powf(1.f-(distance/(((float)viewRange-0.5f)*(float)tileLength)), 0.8) ) ;
+
+    glBindTexture ( GL_TEXTURE_2D, objects[monster].texture.image);
     drawWallTexture(xL, yB, xR, yT, 0.0f, prop, prop_b, c);
 
 }
@@ -687,19 +802,19 @@ float distanceToCenter(float x, float y){
                      + powf( (y - (float)((int)y)-0.5f ), 2) );
 }
 
-void load_texture(GLuint* texture, char* file_name, int* w, int* h, int* n){
+void load_texture(T_texture* texture, char* file_name){
     unsigned char *data ;
-    data = stbi_load(file_name, w, h, n, 0);
+    data = stbi_load(file_name, &texture->width, &texture->height, &texture->nrChannels, STBI_rgb_alpha);
 
     glEnable (GL_TEXTURE_2D);
-        glGenTextures(1, texture);
-        glBindTexture ( GL_TEXTURE_2D, *texture);
+        glGenTextures(1, &texture->image);
+        glBindTexture ( GL_TEXTURE_2D, texture->image);
         glTexEnvf ( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE , GL_MODULATE);
         glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
         glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, *w, *h, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture->width, texture->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     glEnd();
     stbi_image_free(data);
@@ -778,7 +893,7 @@ void drawBackgroundTexture(){
             c_BR = C_darken(c_BR, powf(1.f-(d_BR_b/(((float)viewRange-0.5f)*(float)tileLength)), 0.8) ) ;
 
             // CEILING
-            glBindTexture ( GL_TEXTURE_2D, t_Soil);
+            glBindTexture ( GL_TEXTURE_2D, t_Soil.image);
             glEnable (GL_TEXTURE_2D);
                 glBegin(GL_QUADS);
                 glColor3f(c_BL.r, c_BL.g, c_BL.b);
@@ -801,7 +916,7 @@ void drawBackgroundTexture(){
             y_screen_BR = -(1.f/d_BR_b*wall_height) - playerZ / d_BR_b*wall_height;
 
             // FLOOR
-            glBindTexture ( GL_TEXTURE_2D, t_Soil);
+            glBindTexture ( GL_TEXTURE_2D, (i_x*i_y+452+i_y)%16?t_Soil.image:t_Soil2.image);
             glEnable (GL_TEXTURE_2D);
                 glBegin(GL_QUADS);
                 glColor3f(c_BL.r, c_BL.g, c_BL.b);

@@ -8,9 +8,9 @@
 #include <math.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
-#include "color.h"
-#include "maze.h"
-
+#include "libs/color.h"
+#include "libs/maze/maze.h"
+#include "libs/utils.h"
 
 /*******************/
 /* --- DEFINES --- */
@@ -39,13 +39,6 @@
 /*****************/
 /* --- TYPES --- */
 /*****************/
-
-enum side {
-    S_RIGHT,
-    S_TOP,
-    S_LEFT,
-    S_BOTTOM
-};
 
 typedef struct texture
 {
@@ -93,10 +86,13 @@ enum side get_side(float X, float Y);
 float distanceToCenter(float x, float y);
 void load_texture(T_texture* texture, char* file_name);
 float angleFromPosition(float x, float y, float d);
-float modPI(float nb);
+
 void drawBackgroundTexture();
 int isPillar(float x, float y);
 float pillarRadius(float x, float y);
+void drawMap();
+int O_isValidPosition(int* map, float x, float y);
+void O_addObjects(int* map);
 
 /*********************/
 /* --- VARIABLES --- */
@@ -163,103 +159,10 @@ T_texture t_Monster;
 T_texture t_Chain;
 T_texture t_Chain2;
 
-/*GLuint t_Brick;
-int width_Brick, height_Brick, nrChannels_Brick;
-GLuint t_Metal;
-int width_Metal, height_Metal, nrChannels_Metal;
-GLuint t_Error;
-int width_Error, height_Error, nrChannels_Error;
-GLuint t_Soil;
-int width_Soil, height_Soil, nrChannels_Soil;
-GLuint t_Tank;
-int width_Tank, height_Tank, nrChannels_Tank;
-GLuint t_Monster;
-int width_Monster, height_Monster, nrChannels_Monster;
-GLuint t_Chain;
-int width_Chain, height_Chain, nrChannels_Chain;*/
-
-/*
-O_objects monsters[O_NB_MAX_MONSTERS];
-float monsters_prop[O_NB_MAX_MONSTERS];
-float monsters_dist[O_NB_MAX_MONSTERS];
-int nb_monster;*/
-
 O_objects objects[O_NB_MAX_OBJECTS];
 float objects_prop[O_NB_MAX_OBJECTS];
 float objects_dist[O_NB_MAX_OBJECTS];
 int nb_oject;
-
-void drawMap(){
-    float square_size_x = 0.015f;
-    float square_size_y = square_size_x / W_HEIGHT * W_WIDTH;
-
-    float map_start_x = square_size_x*3 - 1.f;
-    float map_start_y = 1.f - square_size_y;
-
-    glEnable(GL_BLEND); //Enable blending.
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); //Set blending function.
-
-    for(int i_x=0; i_x<width_map ; i_x++){
-    for(int i_y=0; i_y<height_map; i_y++){
-
-        if (map[ i_y*width_map + i_x ]!=1){
-            glDisable (GL_TEXTURE_2D);
-            glBegin(GL_QUADS);
-                //glColor3f(1, 1, 1);
-                glColor4f(1, 1, 1 ,0.2);
-                glTexCoord2f (0.0f,0.0f);
-                glVertex3f(map_start_x+square_size_x*i_x, map_start_y -square_size_y*i_y, 0); // bottom left
-                glTexCoord2f (1.0f,0.0f);
-                glVertex3f(map_start_x+square_size_x +square_size_x*i_x, map_start_y -square_size_y*i_y, 0); // bottom right
-                glTexCoord2f (1.0f,1.0f);
-                glVertex3f(map_start_x+square_size_x +square_size_x*i_x, map_start_y-square_size_y -square_size_y*i_y, 0);// top right
-                glTexCoord2f (0.0f,1.0f);
-                glVertex3f(map_start_x +square_size_x*i_x, map_start_y-square_size_y -square_size_y*i_y, 0); // top left
-            glEnd();
-        }
-
-    }
-    }
-    glDisable(GL_BLEND);
-
-    glDisable (GL_TEXTURE_2D);
-    glBegin(GL_QUADS);
-        glColor3f(1, 0, 0);
-        glTexCoord2f (0.0f,0.0f);
-        glVertex3f(map_start_x                 +square_size_x*playerX -square_size_x/4, map_start_y                 -square_size_y*playerY +square_size_y/4, 0); // bottom left
-        glTexCoord2f (1.0f,0.0f);
-        glVertex3f(map_start_x+square_size_x/2 +square_size_x*playerX -square_size_x/4, map_start_y                 -square_size_y*playerY +square_size_y/4, 0); // bottom right
-        glTexCoord2f (1.0f,1.0f);
-        glVertex3f(map_start_x+square_size_x/2 +square_size_x*playerX -square_size_x/4, map_start_y-square_size_y/2 -square_size_y*playerY +square_size_y/4, 0);// top right
-        glTexCoord2f (0.0f,1.0f);
-        glVertex3f(map_start_x                 +square_size_x*playerX -square_size_x/4, map_start_y-square_size_y/2 -square_size_y*playerY +square_size_y/4, 0); // top left
-    glEnd();
-
-    
-}
-
-int O_isValidPosition(int* map, float x, float y){
-    return map[ (int)(y)*width_map + (int)(x) ]==0;
-}
-
-void O_addObjects(int* map){
-    int nbChain = 20;
-    
-    for(int i=0; i<nbChain; i++){
-        float x=0;
-        float y=0;
-        while(!O_isValidPosition(map, x, y)){
-            x = (float)randMinMax(1, (width_map-1) *5) / 5.f;
-            y = (float)randMinMax(1, (height_map-1)*5) / 5.f;
-        }
-        O_objects chain = {x, y, randMinMax(0, 2)==1?t_Chain:t_Chain2};
-
-        
-        objects[i] = chain;
-    }
-    
-    nb_oject = nbChain;
-}
 
 /****************/
 /* --- MAIN --- */
@@ -312,15 +215,15 @@ int main(void)
     load_texture(&t_Monster , "monster.png" , &width_Monster , &height_Monster , &nrChannels_Monster );
     load_texture(&t_Chain , "chain.png" , &width_Chain , &height_Chain , &nrChannels_Chain );*/
 
-    load_texture(&t_Brick   , "brick.jpg"   );
-    load_texture(&t_Metal   , "metal.jpg"   );
-    load_texture(&t_Error   , "error.jpg"   );
-    load_texture(&t_Soil    , "soil.jpg"    );
-    load_texture(&t_Soil2   , "soil2.jpg"    );
-    load_texture(&t_Tank    , "tank.jpg"    );
-    load_texture(&t_Monster , "monster.png" );
-    load_texture(&t_Chain   , "chain.png"   );
-    load_texture(&t_Chain2  , "chain2.png"   );
+    load_texture(&t_Brick   , "textures/brick.jpg"   );
+    load_texture(&t_Metal   , "textures/metal.jpg"   );
+    load_texture(&t_Error   , "textures/error.jpg"   );
+    load_texture(&t_Soil    , "textures/soil.jpg"    );
+    load_texture(&t_Soil2   , "textures/soil2.jpg"    );
+    load_texture(&t_Tank    , "textures/tank.jpg"    );
+    load_texture(&t_Monster , "textures/monster.png" );
+    load_texture(&t_Chain   , "textures/chain.png"   );
+    load_texture(&t_Chain2  , "textures/chain2.png"   );
     
 
     #ifdef RANDOM_MAP
@@ -831,18 +734,6 @@ float angleFromPosition(float x, float y, float d){
     }
 }
 
-float modPI(float nb){
-
-    while(nb>M_PI){
-        nb -= M_PI * 2.f;
-    }
-    while(nb<=-M_PI){
-        nb += M_PI * 2.f;
-    }
-
-    return nb;
-}
-
 void drawBackgroundTexture(){
     int x = (int) playerX;
     int y = (int) playerY;
@@ -951,4 +842,76 @@ float pillarRadius(float x, float y){
     if ( map[ ((int)y)*width_map + (int)x ] == 3 ) {
         return pillar_3_radius;
     }
+}
+
+void drawMap(){
+    float square_size_x = 0.015f;
+    float square_size_y = square_size_x / W_HEIGHT * W_WIDTH;
+
+    float map_start_x = square_size_x*3 - 1.f;
+    float map_start_y = 1.f - square_size_y;
+
+    glEnable(GL_BLEND); //Enable blending.
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); //Set blending function.
+
+    for(int i_x=0; i_x<width_map ; i_x++){
+    for(int i_y=0; i_y<height_map; i_y++){
+
+        if (map[ i_y*width_map + i_x ]!=1){
+            glDisable (GL_TEXTURE_2D);
+            glBegin(GL_QUADS);
+                //glColor3f(1, 1, 1);
+                glColor4f(1, 1, 1 ,0.2);
+                glTexCoord2f (0.0f,0.0f);
+                glVertex3f(map_start_x+square_size_x*i_x, map_start_y -square_size_y*i_y, 0); // bottom left
+                glTexCoord2f (1.0f,0.0f);
+                glVertex3f(map_start_x+square_size_x +square_size_x*i_x, map_start_y -square_size_y*i_y, 0); // bottom right
+                glTexCoord2f (1.0f,1.0f);
+                glVertex3f(map_start_x+square_size_x +square_size_x*i_x, map_start_y-square_size_y -square_size_y*i_y, 0);// top right
+                glTexCoord2f (0.0f,1.0f);
+                glVertex3f(map_start_x +square_size_x*i_x, map_start_y-square_size_y -square_size_y*i_y, 0); // top left
+            glEnd();
+        }
+
+    }
+    }
+    glDisable(GL_BLEND);
+
+    glDisable (GL_TEXTURE_2D);
+    glBegin(GL_QUADS);
+        glColor3f(1, 0, 0);
+        glTexCoord2f (0.0f,0.0f);
+        glVertex3f(map_start_x                 +square_size_x*playerX -square_size_x/4, map_start_y                 -square_size_y*playerY +square_size_y/4, 0); // bottom left
+        glTexCoord2f (1.0f,0.0f);
+        glVertex3f(map_start_x+square_size_x/2 +square_size_x*playerX -square_size_x/4, map_start_y                 -square_size_y*playerY +square_size_y/4, 0); // bottom right
+        glTexCoord2f (1.0f,1.0f);
+        glVertex3f(map_start_x+square_size_x/2 +square_size_x*playerX -square_size_x/4, map_start_y-square_size_y/2 -square_size_y*playerY +square_size_y/4, 0);// top right
+        glTexCoord2f (0.0f,1.0f);
+        glVertex3f(map_start_x                 +square_size_x*playerX -square_size_x/4, map_start_y-square_size_y/2 -square_size_y*playerY +square_size_y/4, 0); // top left
+    glEnd();
+
+    
+}
+
+int O_isValidPosition(int* map, float x, float y){
+    return map[ (int)(y)*width_map + (int)(x) ]==0;
+}
+
+void O_addObjects(int* map){
+    int nbChain = 20;
+    
+    for(int i=0; i<nbChain; i++){
+        float x=0;
+        float y=0;
+        while(!O_isValidPosition(map, x, y)){
+            x = (float)randMinMax(1, (width_map-1) *5) / 5.f;
+            y = (float)randMinMax(1, (height_map-1)*5) / 5.f;
+        }
+        O_objects chain = {x, y, randMinMax(0, 2)==1?t_Chain:t_Chain2};
+
+        
+        objects[i] = chain;
+    }
+    
+    nb_oject = nbChain;
 }

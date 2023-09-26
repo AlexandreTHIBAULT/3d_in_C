@@ -1,28 +1,4 @@
-/********************/
-/* --- INCLUDES --- */
-/********************/
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-
-/*******************/
-/* --- DEFINES --- */
-/*******************/
-#define M_H 25
-#define M_W 25
-
-#define M_ROOM_DIM_MAX 8
-#define M_ROOM_DIM_MIN 3
-
-#define M_NB_ROOM 8
-#define M_NB_BOX 16
-
-#define min(X, Y) (((X) < (Y)) ? (X) : (Y))
-#define max(X, Y) (((X) > (Y)) ? (X) : (Y))
-
-/*********************/
-/* --- FUNCTIONS --- */
-/*********************/
+#include "maze.h"
 
 int randMinMax(int min, int max){
     if (min==max) return min;

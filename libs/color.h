@@ -1,11 +1,17 @@
-struct color
+/*****************/
+/* --- TYPES --- */
+/*****************/
+
+typedef struct color
 {
     float r;
     float g;
     float b;
-};
+} C_color;
 
-typedef struct color C_color;
+/*********************/
+/* --- VARIABLES --- */
+/*********************/
 
 const C_color C_red     = {1.f, 0.f, 0.f};
 const C_color C_green   = {0.f, 1.f, 0.f};
@@ -15,6 +21,10 @@ const C_color C_cyan    = {0.f, 1.f, 1.f};
 const C_color C_magenta = {1.f, 0.f, 1.f};
 const C_color C_black   = {0.f, 0.f, 0.f};
 const C_color C_white   = {1.f, 1.f, 1.f};
+
+/*********************/
+/* --- FUNCTIONS --- */
+/*********************/
 
 C_color C_darken(C_color color, float value){
     C_color color_res = color;

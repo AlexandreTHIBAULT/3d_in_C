@@ -1,2 +1,0 @@
-gcc 3d.c -o 3d -lglfw  -lGL -lXrandr  -lXi -lXinerama -lX11 -lrt -ldl -lm 
-./3d

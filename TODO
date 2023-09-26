@@ -1,0 +1,25 @@
+README.md
+3d.c
+Makefile
+textures
+  *.png
+  *.jpg
+libs
+  color.h
+  utils.h
+  maze
+    maze.h
+    maze.c
+    // ok, séparer les fichier
+  render
+    render.h
+    render.c
+    // T_texture
+    // load_texture, t_*, draw*
+    // faire fonction pour load toutes les textures
+    
+    object.h
+    object.c
+    // import render.h	
+    
+

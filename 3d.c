@@ -109,6 +109,7 @@ T_texture t_Tank;
 T_texture t_Monster;
 T_texture t_Chain;
 T_texture t_Chain2;
+T_texture t_Slingshot;
 
 O_objects objects[O_NB_MAX_OBJECTS];
 float objects_prop[O_NB_MAX_OBJECTS];
@@ -156,15 +157,16 @@ int main(void)
 
     /* LOAD TEXTURE */
 
-    T_loadTexture(&t_Brick   , "textures/brick.jpg"   );
-    T_loadTexture(&t_Metal   , "textures/metal.jpg"   );
-    T_loadTexture(&t_Error   , "textures/error.jpg"   );
-    T_loadTexture(&t_Soil    , "textures/soil.jpg"    );
-    T_loadTexture(&t_Soil2   , "textures/soil2.jpg"   );
-    T_loadTexture(&t_Tank    , "textures/tank.jpg"    );
-    T_loadTexture(&t_Monster , "textures/monster.png" );
-    T_loadTexture(&t_Chain   , "textures/chain.png"   );
-    T_loadTexture(&t_Chain2  , "textures/chain2.png"  );
+    T_loadTexture(&t_Brick      , "textures/brick.jpg"    );
+    T_loadTexture(&t_Metal      , "textures/metal.jpg"    );
+    T_loadTexture(&t_Error      , "textures/error.jpg"    );
+    T_loadTexture(&t_Soil       , "textures/soil.jpg"     );
+    T_loadTexture(&t_Soil2      , "textures/soil2.jpg"    );
+    T_loadTexture(&t_Tank       , "textures/tank.jpg"     );
+    T_loadTexture(&t_Monster    , "textures/monster.png"  );
+    T_loadTexture(&t_Chain      , "textures/chain.png"    );
+    T_loadTexture(&t_Chain2     , "textures/chain2.png"   );
+    T_loadTexture(&t_Slingshot  , "textures/slingshot.png");
 
     /* Create map */
     #ifdef RANDOM_MAP
@@ -175,7 +177,6 @@ int main(void)
 
     /* SETUP MONSTERS */
     
-
 
     /* SETUP OBJECTS */
     
@@ -269,6 +270,7 @@ int main(void)
         
         /* Draw map in the corner of the screen */
         drawMap(map);
+        T_drawWeapon(t_Slingshot);
 
         /* Inputs */
         movement(window);

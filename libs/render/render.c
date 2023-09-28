@@ -80,3 +80,10 @@ void T_drawTexture(float xL, float yB, float xR, float yT,
     glEnd();
 
 }
+
+void T_drawWeapon(T_texture weapon){
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBindTexture ( GL_TEXTURE_2D, weapon.image);
+    T_drawTexture(0.25f, -1.05f, 0.25f+0.4444f, 0.7901f-1.05f, 0, 0, 1, C_white);
+}

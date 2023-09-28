@@ -41,6 +41,7 @@
     void T_drawTexture(float xL, float yB, float xR, float yT,
                         float z,
                         float texture_start, float texture_end,
-                        C_color color);                
+                        C_color color); 
+    void T_drawWeapon(T_texture weapon);               
 
 #endif

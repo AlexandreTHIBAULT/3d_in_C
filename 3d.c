@@ -11,6 +11,7 @@
 #include "libs/color.h"
 #include "libs/maze/maze.h"
 #include "libs/utils.h"
+#include "libs/render/render.h"
 
 /*******************/
 /* --- DEFINES --- */
@@ -40,14 +41,6 @@
 /* --- TYPES --- */
 /*****************/
 
-typedef struct texture
-{
-    GLuint image;
-    int width;
-    int height;
-    int nrChannels;
-} T_texture;
-
 typedef struct object
 {
     float x;
@@ -61,11 +54,7 @@ typedef struct object
 
 void error_callback(int error, const char* description);
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
-void drawTriangle(float x1, float y1, 
-                  float x2, float y2,
-                  float x3, float y3,
-                  float z,
-                  C_color color);
+
 void drawQuadri(float x1, float y1, 
                 float x2, float y2,
                 float x3, float y3,
@@ -172,8 +161,6 @@ int main(void)
 {
     GLFWwindow * window;
     double xpos, ypos, xpos_prev, ypos_prev;
-
-   
 
     /* Initialize the library */
     if (!glfwInit())
@@ -383,24 +370,6 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
         direction += M_PI/100. * t_delta*50;
     else if (key == GLFW_KEY_LEFT && (action == GLFW_REPEAT || action == GLFW_PRESS))
         direction -= M_PI/100. * t_delta*50;*/
-
-}
-
-void drawTriangle(float x1, float y1, 
-                  float x2, float y2,
-                  float x3, float y3,
-                  float z,
-                  C_color color){
-    
-    glDisable(GL_TEXTURE_2D);
-    glBegin(GL_TRIANGLES);
-        glColor3f(color.r, color.g, color.b);
-        glVertex3f(x1, y1, z);
-        glColor3f(color.r, color.g, color.b);
-        glVertex3f(x2, y2, z);
-        glColor3f(color.r, color.g, color.b);
-        glVertex3f(x3, y3, z);
-    glEnd();
 
 }
 

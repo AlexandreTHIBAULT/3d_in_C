@@ -21,5 +21,6 @@ libs
     object.h
     object.c
     // import render.h	
-    
 
+/*---------------------------------------*/
+Enlever const aux C_color pour tester avec render

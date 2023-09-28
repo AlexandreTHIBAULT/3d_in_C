@@ -1,8 +1,9 @@
-/*****************/
-/* --- TYPES --- */
-/*****************/
 #ifndef LIB_COLOR
     #define LIB_COLOR
+
+    /*****************/
+    /* --- TYPES --- */
+    /*****************/
 
     typedef struct color
     {

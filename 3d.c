@@ -3,15 +3,14 @@
 /********************/
 
 #include <GLFW/glfw3.h>
-//#include <GL/gl.h>
 #include <stdio.h>
 #include <math.h>
 #define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-#include "libs/color.h"
+#include "libs/color/color.h"
 #include "libs/maze/maze.h"
 #include "libs/utils.h"
 #include "libs/render/render.h"
+#include "libs/object/object.h"
 
 /*******************/
 /* --- DEFINES --- */
@@ -31,22 +30,8 @@
 #define K_TURN_RIGHT GLFW_KEY_E
 #define K_JUMP GLFW_KEY_SPACE
 
-#define O_NB_MAX_MONSTERS 10
-#define O_NB_MAX_OBJECTS 255
-
 #define SHOW_FPS
 #define RANDOM_MAP
-
-/*****************/
-/* --- TYPES --- */
-/*****************/
-
-typedef struct object
-{
-    float x;
-    float y;
-    T_texture texture;
-} O_objects;
 
 /*********************/
 /* --- FUNCTIONS --- */
@@ -54,34 +39,15 @@ typedef struct object
 
 void error_callback(int error, const char* description);
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
-
-void drawQuadri(float x1, float y1, 
-                float x2, float y2,
-                float x3, float y3,
-                float x4, float y4,
-                float z,
-                C_color color);
 float isSeeingObject(float X, float Y, float castDirection, int monster);
 void addObjectToDrawQueue(int queue[], int m, int nbMonster);
 float distanceToWall(float X, float Y, float castDirection);
-void drawWallTexture(float xL, float yB, float xR, float yT,
-                     float z,
-                     float texture_start, float texture_end,
-                     C_color color);
-void drawMonster(float distance, int n, int monster);
+void drawObject(float distance, int n, int object);
 void drawWall(float distance, int n);
 void movement(GLFWwindow * window);
-enum side get_side(float X, float Y);
 float distanceToCenter(float x, float y);
-void load_texture(T_texture* texture, char* file_name);
-float angleFromPosition(float x, float y, float d);
-
 void drawBackgroundTexture();
-int isPillar(float x, float y);
-float pillarRadius(float x, float y);
-void drawMap();
-int O_isValidPosition(int* map, float x, float y);
-void O_addObjects(int* map);
+void drawMap(M_map map);
 
 /*********************/
 /* --- VARIABLES --- */
@@ -103,9 +69,7 @@ void O_addObjects(int* map);
                 1,1,1,1,1,1};
 #endif
 #ifdef RANDOM_MAP
-    int width_map = M_W;
-    int height_map = M_H;
-    int* map;
+    M_map map;
 #endif
 
 float playerX = 2.5f;
@@ -133,8 +97,6 @@ float ray_x;
 float ray_y;
 
 float wall_height = 11.f;
-
-float pillar_3_radius = 0.33f;
 
 enum side current_side;
 
@@ -191,53 +153,40 @@ int main(void)
 
     double t = glfwGetTime();
     double time = glfwGetTime();
-    
 
     /* LOAD TEXTURE */
-    /*load_texture(&t_Brick, "brick.jpg", &width_Brick, &height_Brick, &nrChannels_Brick);
-    load_texture(&t_Metal, "metal.jpg", &width_Metal, &height_Metal, &nrChannels_Metal);
-    load_texture(&t_Error, "error.jpg", &width_Error, &height_Error, &nrChannels_Error);
-    load_texture(&t_Soil , "soil.jpg" , &width_Soil , &height_Soil , &nrChannels_Soil );
-    load_texture(&t_Tank , "tank.jpg" , &width_Tank , &height_Tank , &nrChannels_Tank );
-    load_texture(&t_Monster , "monster.png" , &width_Monster , &height_Monster , &nrChannels_Monster );
-    load_texture(&t_Chain , "chain.png" , &width_Chain , &height_Chain , &nrChannels_Chain );*/
 
-    load_texture(&t_Brick   , "textures/brick.jpg"   );
-    load_texture(&t_Metal   , "textures/metal.jpg"   );
-    load_texture(&t_Error   , "textures/error.jpg"   );
-    load_texture(&t_Soil    , "textures/soil.jpg"    );
-    load_texture(&t_Soil2   , "textures/soil2.jpg"    );
-    load_texture(&t_Tank    , "textures/tank.jpg"    );
-    load_texture(&t_Monster , "textures/monster.png" );
-    load_texture(&t_Chain   , "textures/chain.png"   );
-    load_texture(&t_Chain2  , "textures/chain2.png"   );
-    
+    T_loadTexture(&t_Brick   , "textures/brick.jpg"   );
+    T_loadTexture(&t_Metal   , "textures/metal.jpg"   );
+    T_loadTexture(&t_Error   , "textures/error.jpg"   );
+    T_loadTexture(&t_Soil    , "textures/soil.jpg"    );
+    T_loadTexture(&t_Soil2   , "textures/soil2.jpg"   );
+    T_loadTexture(&t_Tank    , "textures/tank.jpg"    );
+    T_loadTexture(&t_Monster , "textures/monster.png" );
+    T_loadTexture(&t_Chain   , "textures/chain.png"   );
+    T_loadTexture(&t_Chain2  , "textures/chain2.png"  );
 
+    /* Create map */
     #ifdef RANDOM_MAP
         map = M_makeMaze(&playerX, &playerY);
-        M_printMaze(map);
-        O_addObjects(map);
+        M_printMaze(map.map);
+        nb_oject = O_addObjects(objects, map, t_Chain, t_Chain2);
     #endif
+
     /* SETUP MONSTERS */
-    /*O_objects m = {playerX-1.f, playerY-1.f, t_Monster};
-    O_objects m2 = {playerX-1.f*2, playerY-1.f*2, t_Monster};
-    O_objects m3 = {playerX+1.f, playerY+1.f, t_Monster};
-    monsters[0] = m;
-    monsters[1] = m2;
-    monsters[2] = m3;
-    nb_monster = 3;*/
-    //map[(int)monsters[0].y * width_map + (int)monsters[0].x] = 7;
+    
 
-    /*-------------------------------*/
 
-    glfwGetCursorPos(window, &xpos, &ypos);
-    xpos_prev = xpos;
-    ypos_prev = ypos;
-
+    /* SETUP OBJECTS */
+    
     int queue_objects[O_NB_MAX_OBJECTS];
     for(int i=0; i<O_NB_MAX_OBJECTS; i++){
         queue_objects[i] = 0;
     }
+
+    glfwGetCursorPos(window, &xpos, &ypos);
+    xpos_prev = xpos;
+    ypos_prev = ypos;
 
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
@@ -245,12 +194,10 @@ int main(void)
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
         glViewport(0, 0, width, height);
-
         
         double time_prev = time;
         time = glfwGetTime();
         t_delta = time - time_prev;
-
 
         /* Render here */
         glClearColor(0.f, 0.f, 0.f, 0.f);
@@ -258,17 +205,12 @@ int main(void)
 
         C_color ground_c = {0.2, 0.2, 0.2};
         C_color ceiling_c = {0.2, 0.2, 0.2};
-        //drawGround(ground_c);
-        //drawCeiling(ceiling_c);
         drawBackgroundTexture();
 
         float ray_direction;
         float ray_distance;
         for (int i=0; i<(V_NBRAY); i++){
-            ray_direction = direction-(V_FOV/2.f) + ( V_FOV/((float)(V_NBRAY-1)) * ((float)i) );
-            
-            //if (time-t>=1.) printf("[%f]", distanceToWall(playerX, playerY, ray_direction));
-            
+            ray_direction = direction-(V_FOV/2.f) + ( V_FOV/((float)(V_NBRAY-1)) * ((float)i) );            
             ray_distance = distanceToWall(playerX, playerY, ray_direction);
             current_side = get_side(ray_x, ray_y);
 
@@ -289,16 +231,13 @@ int main(void)
                 }
             }
 
-            //monsters_dist[0] = isSeeingObject(playerX, playerY, ray_direction, 0);
-            //monsters_dist[1] = isSeeingObject(playerX, playerY, ray_direction, 1);
-
-            if( map[ ((int)ray_y)*width_map + (int)ray_x ] == 1){
+            if( map.map[ ((int)ray_y)*map.width + (int)ray_x ] == 1){
                 glBindTexture ( GL_TEXTURE_2D, t_Brick.image);
             }
-            else if( map[ ((int)ray_y)*width_map + (int)ray_x ] == 2){
+            else if( map.map[ ((int)ray_y)*map.width + (int)ray_x ] == 2){
                 glBindTexture ( GL_TEXTURE_2D, t_Metal.image);
             }
-            else if( map[ ((int)ray_y)*width_map + (int)ray_x ] == 3){
+            else if( map.map[ ((int)ray_y)*map.width + (int)ray_x ] == 3){
                 glBindTexture ( GL_TEXTURE_2D, t_Tank.image);
             }
             else {
@@ -308,20 +247,18 @@ int main(void)
             if (ray_distance < (float) (viewRange*tileLength))
                 drawWall(ray_distance, i);
             
-
-            
             glEnable(GL_BLEND); //Enable blending.
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); //Set blending function.
 
             for(int k=0; k<nb_objects_visible; k++){
                 int m = queue_objects[k];
                 if (objects_dist[m] && objects_dist[m]<ray_distance)
-                    drawMonster(objects_dist[m], i, m);
+                    drawObject(objects_dist[m], i, m);
             }
             
-
         }
 
+        /* SHOW FPS */
         if (time-t>=1.){
             //printf("%f | %f\n", direction, distanceToWall(playerX, playerY, direction));
             #ifdef SHOW_FPS
@@ -330,7 +267,8 @@ int main(void)
             t = time;
         }
         
-        drawMap();
+        /* Draw map in the corner of the screen */
+        drawMap(map);
 
         /* Inputs */
         movement(window);
@@ -353,55 +291,24 @@ int main(void)
     return 0;
 }
 
-void error_callback(int error, const char* description)
-{
+void error_callback(int error, const char* description){
     fprintf(stderr, "Error: %s\n", description);
 }
 
-static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
+static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods){
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
         glfwSetWindowShouldClose(window, GLFW_TRUE);
         #ifdef RANDOM_MAP
-            free(map);
+            free(map.map);
         #endif
     }
-    /*else if (key == GLFW_KEY_RIGHT && (action == GLFW_REPEAT || action == GLFW_PRESS))
-        direction += M_PI/100. * t_delta*50;
-    else if (key == GLFW_KEY_LEFT && (action == GLFW_REPEAT || action == GLFW_PRESS))
-        direction -= M_PI/100. * t_delta*50;*/
-
 }
 
-void drawQuadri(float x1, float y1, 
-                float x2, float y2,
-                float x3, float y3,
-                float x4, float y4,
-                float z,
-                C_color color){
-    
-    drawTriangle(
-        x1, y1, 
-        x2, y2,
-        x3, y3,
-        z,
-        color
-    );
-    
-    drawTriangle(
-        x3, y3, 
-        x4, y4,
-        x1, y1,
-        z,
-        color
-    );
-}
-
-float isSeeingObject(float X, float Y, float castDirection, int monster){
-    float d = sqrtf(  powf( (X - objects[monster].x ), 2) 
-                    + powf( (Y - objects[monster].y ), 2) );
-    float cos = (objects[monster].x - X)/d;
-    float sin = (objects[monster].y - Y)/d;
+float isSeeingObject(float X, float Y, float castDirection, int object_i){
+    float d = sqrtf(  powf( (X - objects[object_i].x ), 2) 
+                    + powf( (Y - objects[object_i].y ), 2) );
+    float cos = (objects[object_i].x - X)/d;
+    float sin = (objects[object_i].y - Y)/d;
 
     if( cos*cosf(castDirection )+ sin*sinf(castDirection) < 0 ){
         return 0.f;
@@ -410,23 +317,23 @@ float isSeeingObject(float X, float Y, float castDirection, int monster){
     float a = tanf(castDirection);
     float b = Y-a*X;
 
-    float angle = angleFromPosition(objects[monster].x - X, objects[monster].y - Y, d);
+    float angle = angleFromPosition(objects[object_i].x - X, objects[object_i].y - Y, d);
 
     float ap = tanf(castDirection-(M_1_PI/2.f));
-    float bp = objects[monster].y-ap*objects[monster].x;
+    float bp = objects[object_i].y-ap*objects[object_i].x;
 
     float inters_x = -(bp-b)/(ap-a);
     float inters_y = a*inters_x+b;
 
-    if (sqrtf(  powf( (inters_x - objects[monster].x ), 2) 
-                   + powf( (inters_y - objects[monster].y ), 2) ) > 3.f)
+    if (sqrtf(  powf( (inters_x - objects[object_i].x ), 2) 
+                   + powf( (inters_y - objects[object_i].y ), 2) ) > 3.f)
         return 0.f;
 
-    objects_prop[monster] = 1.f/2.f - (sqrtf(  powf( (inters_x - objects[monster].x ), 2) 
-                              + powf( (inters_y - objects[monster].y ), 2) )) /6.f;
+    objects_prop[object_i] = 1.f/2.f - (sqrtf(  powf( (inters_x - objects[object_i].x ), 2) 
+                              + powf( (inters_y - objects[object_i].y ), 2) )) /6.f;
 
-    d = sqrtf(  powf( (X - objects[monster].x ), 2) 
-              + powf( (Y - objects[monster].y ), 2) );
+    d = sqrtf(  powf( (X - objects[object_i].x ), 2) 
+              + powf( (Y - objects[object_i].y ), 2) );
 
     //float D = ((float)d);
     return d*cosf(direction-castDirection) * tileLength;
@@ -446,19 +353,18 @@ void addObjectToDrawQueue(int queue[], int m, int nbObject){
 }
 
 float distanceToWall(float X, float Y, float castDirection){
-    //float x, y;
     int nbPerTile = 100;
     for(int d=0; d<viewRange*tileLength*nbPerTile; d++){
         ray_x = X + ((float)d)/((float) nbPerTile)/tileLength * cosf(castDirection);
         ray_y = Y + ((float)d)/((float) nbPerTile)/tileLength * sinf(castDirection);
 
-        if (isPillar(ray_x, ray_y)){
-            if(distanceToCenter(ray_x, ray_y)<pillarRadius(ray_x, ray_y)){
+        if (isPillar(map, ray_x, ray_y)){
+            if(distanceToCenter(ray_x, ray_y)<pillarRadius(map, ray_x, ray_y)){
                 float D = ((float)d)/((float) nbPerTile);
                 return D*cosf(direction-castDirection);
             }
         }
-        else if ( map[ ((int)ray_y)*width_map + (int)ray_x ]){
+        else if ( map.map[ ((int)ray_y)*map.width + (int)ray_x ]){
             float D = ((float)d)/((float) nbPerTile);
             //return ((float)d)/((float) nbPerTile);
             //return fabsf( sinf(direction+M_PI/2.f)*(x - playerX) - cosf(direction+M_PI/2.f)*(y - playerY)) * (float)tileLength;
@@ -469,27 +375,7 @@ float distanceToWall(float X, float Y, float castDirection){
     return (float) (viewRange*tileLength);
 }
 
-void drawWallTexture(float xL, float yB, float xR, float yT,
-                     float z,
-                     float texture_start, float texture_end,
-                     C_color color){
-    
-    glEnable (GL_TEXTURE_2D);
-        glBegin(GL_QUADS);
-        glColor3f(color.r, color.g, color.b);
-        glTexCoord2f (texture_start,1.0f);
-        glVertex3f(xL, yB, z); // bottom left
-        glTexCoord2f (texture_end,1.0f);
-        glVertex3f(xR, yB, z); // bottom right
-        glTexCoord2f (texture_end,0.0f);
-        glVertex3f(xR, yT, z);// top right
-        glTexCoord2f (texture_start,0.0f);
-        glVertex3f(xL, yT, z); // top left
-    glEnd();
-
-}
-
-void drawMonster(float distance, int n, int monster){
+void drawObject(float distance, int n, int object){
     float w = 2.f/(float)V_NBRAY;
     float h = 2.f/distance*wall_height;
     float xL = w*(float)n - 1.f;
@@ -502,14 +388,14 @@ void drawMonster(float distance, int n, int monster){
     float prop, prop_b;
 
    
-    prop = objects_prop[monster];
+    prop = objects_prop[object];
     prop_b = prop;
     
 
     c = C_darken(c, powf(1.f-(distance/(((float)viewRange-0.5f)*(float)tileLength)), 0.8) ) ;
 
-    glBindTexture ( GL_TEXTURE_2D, objects[monster].texture.image);
-    drawWallTexture(xL, yB, xR, yT, 0.0f, prop, prop_b, c);
+    glBindTexture ( GL_TEXTURE_2D, objects[object].texture.image);
+    T_drawTexture(xL, yB, xR, yT, 0.0f, prop, prop_b, c);
 
 }
 
@@ -525,20 +411,18 @@ void drawWall(float distance, int n){
 
     float prop, prop_b;
 
-   
-
     if (current_side == S_TOP){
-        if(!isPillar(ray_x, ray_y)) c = C_darken(c, 0.8);
+        if(!isPillar(map, ray_x, ray_y)) c = C_darken(c, 0.8);
         prop = 1.f - (ray_x - (int)ray_x);
         prop_b = prop+(1.f/256.f);
     }
     else if(current_side == S_LEFT){
-        if(!isPillar(ray_x, ray_y)) c = C_darken(c, 0.9);
+        if(!isPillar(map, ray_x, ray_y)) c = C_darken(c, 0.9);
         prop = ray_y - (int)ray_y;
         prop_b = prop+(1.f/256.f);
     }
     else if(current_side == S_RIGHT){
-        if(!isPillar(ray_x, ray_y)) c = C_darken(c, 0.9);
+        if(!isPillar(map, ray_x, ray_y)) c = C_darken(c, 0.9);
         prop = 1.f - (ray_y - (int)ray_y);
         prop_b = prop+(1.f/256.f);
     }
@@ -550,9 +434,9 @@ void drawWall(float distance, int n){
     
     prop_b = prop;
     c = C_darken(c, powf(1.f-(distance/(((float)viewRange-0.5f)*(float)tileLength)), 0.8) ) ;
-    drawWallTexture(xL, yB, xR, yT, 0.0f, prop, prop_b, c);
+    T_drawTexture(xL, yB, xR, yT, 0.0f, prop, prop_b, c);
     //if ((int)distance<viewRange*tileLength)
-    /*drawQuadri(xL, yB,
+    /*T_drawQuadri(xL, yB,
             xL, yT,
             xR, yT,
             xR, yB,
@@ -604,8 +488,8 @@ void movement(GLFWwindow * window){
     speedX *= t_delta*2.f;
     speedY *= t_delta*2.f;
 
-    if (map[ ((int)(playerY+speedY))*width_map + (int)(playerX+speedX) ] == 0  
-    || (isPillar(playerX+speedX, playerY+speedY) && distanceToCenter(playerX+speedX, playerY+speedY)>=pillarRadius(playerX+speedX, playerY+speedY)) ){
+    if (map.map[ ((int)(playerY+speedY))*map.width + (int)(playerX+speedX) ] == 0  
+    || (isPillar(map, playerX+speedX, playerY+speedY) && distanceToCenter(playerX+speedX, playerY+speedY)>=pillarRadius(map, playerX+speedX, playerY+speedY)) ){
         
         playerX += speedX;
         playerY += speedY;
@@ -616,10 +500,10 @@ void movement(GLFWwindow * window){
 
         enum side dest_side = get_side(destination_X, destination_Y);
 
-        if ( (dest_side == S_BOTTOM || dest_side == S_TOP) && ( map[((int)(playerY))*width_map + (int)(playerX+speedX) ] == 0 )){
+        if ( (dest_side == S_BOTTOM || dest_side == S_TOP) && ( map.map[((int)(playerY))*map.width + (int)(playerX+speedX) ] == 0 )){
             playerX += speedX;
         }
-        else if( (dest_side == S_LEFT || dest_side == S_RIGHT) && ( map[ (int)(playerY+speedY)*width_map + (int)(playerX) ] == 0 )){
+        else if( (dest_side == S_LEFT || dest_side == S_RIGHT) && ( map.map[ (int)(playerY+speedY)*map.width + (int)(playerX) ] == 0 )){
             playerY += speedY;
         }
     }
@@ -649,58 +533,9 @@ void movement(GLFWwindow * window){
     
 }
 
-enum side get_side(float X, float Y){
-    float x = X - (int)X;
-    float y = Y - (int)Y;
-    float a1 = x*x + y*y;
-    float a2 = (1-x)*(1-x) + y*y;
-    float a3 = (1-x)*(1-x) + (1-y)*(1-y);
-    float a4 = x*x + (1-y)*(1-y);
-    int d1 = (a1>a3);
-    int d2 = (a2>a4);
-
-    if(d1 && d2)
-        return S_BOTTOM;
-    else if(d1 && !d2)
-        return S_RIGHT;
-    else if(!d1 && d2)
-        return S_LEFT;
-    else
-        return S_TOP;
-}
-
 float distanceToCenter(float x, float y){
     return sqrtf(  powf( (x - (float)((int)x)-0.5f ), 2) 
                      + powf( (y - (float)((int)y)-0.5f ), 2) );
-}
-
-void load_texture(T_texture* texture, char* file_name){
-    unsigned char *data ;
-    data = stbi_load(file_name, &texture->width, &texture->height, &texture->nrChannels, STBI_rgb_alpha);
-
-    glEnable (GL_TEXTURE_2D);
-        glGenTextures(1, &texture->image);
-        glBindTexture ( GL_TEXTURE_2D, texture->image);
-        glTexEnvf ( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE , GL_MODULATE);
-        glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-        glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameterf ( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture->width, texture->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    glEnd();
-    stbi_image_free(data);
-}
-
-float angleFromPosition(float x, float y, float d){
-    float cos = x/d;
-    float sin = y/d;
-
-    if (sin > 0){
-        return acosf(cos);
-    }else{
-        return -acosf(cos);
-    }
 }
 
 void drawBackgroundTexture(){
@@ -799,21 +634,7 @@ void drawBackgroundTexture(){
     }
 }
 
-int isPillar(float x, float y){
-    if ( map[ ((int)y)*width_map + (int)x ] == 3 ) {
-        return 1;
-    }
-
-    return 0;
-}
-
-float pillarRadius(float x, float y){
-    if ( map[ ((int)y)*width_map + (int)x ] == 3 ) {
-        return pillar_3_radius;
-    }
-}
-
-void drawMap(){
+void drawMap(M_map map){
     float square_size_x = 0.015f;
     float square_size_y = square_size_x / W_HEIGHT * W_WIDTH;
 
@@ -823,10 +644,10 @@ void drawMap(){
     glEnable(GL_BLEND); //Enable blending.
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); //Set blending function.
 
-    for(int i_x=0; i_x<width_map ; i_x++){
-    for(int i_y=0; i_y<height_map; i_y++){
+    for(int i_x=0; i_x<map.width ; i_x++){
+    for(int i_y=0; i_y<map.height; i_y++){
 
-        if (map[ i_y*width_map + i_x ]!=1){
+        if (map.map[ i_y*map.width + i_x ]!=1){
             glDisable (GL_TEXTURE_2D);
             glBegin(GL_QUADS);
                 //glColor3f(1, 1, 1);
@@ -860,27 +681,4 @@ void drawMap(){
     glEnd();
 
     
-}
-
-int O_isValidPosition(int* map, float x, float y){
-    return map[ (int)(y)*width_map + (int)(x) ]==0;
-}
-
-void O_addObjects(int* map){
-    int nbChain = 20;
-    
-    for(int i=0; i<nbChain; i++){
-        float x=0;
-        float y=0;
-        while(!O_isValidPosition(map, x, y)){
-            x = (float)randMinMax(1, (width_map-1) *5) / 5.f;
-            y = (float)randMinMax(1, (height_map-1)*5) / 5.f;
-        }
-        O_objects chain = {x, y, randMinMax(0, 2)==1?t_Chain:t_Chain2};
-
-        
-        objects[i] = chain;
-    }
-    
-    nb_oject = nbChain;
 }

@@ -1,10 +1,5 @@
 #include "maze.h"
 
-int randMinMax(int min, int max){
-    if (min==max) return min;
-    return (rand()%(max-min) + min);
-}
-
 void M_printMaze(int* maze){
     for (int i_h=0; i_h<M_H; i_h++){
         for (int i_w=0; i_w<M_W; i_w++){
@@ -17,13 +12,13 @@ void M_printMaze(int* maze){
     }
 }
 
-int* M_initMaze(){
+M_map M_initMaze(){
     int* maze = malloc(M_H*M_W * sizeof(int));
     for(int i=0; i<M_H*M_W; i++){
         maze[i] = 1;
     }
-
-    return maze;
+    M_map maze_res = {M_W, M_H, maze};
+    return maze_res;
 }
 
 void M_makeRoom(int* maze, int room_x, int room_y, int room_h, int room_w){
@@ -209,9 +204,9 @@ void M_addDetails(int* maze, int rooms_x[], int rooms_y[], int rooms_h[], int ro
 
 }
 
-int* M_makeMaze(float* start_x, float* start_y){
+M_map M_makeMaze(float* start_x, float* start_y){
     srand( time( NULL ) );
-    int* maze = M_initMaze();
+    M_map maze = M_initMaze();
 
     int rooms_x[M_NB_ROOM];
     int rooms_y[M_NB_ROOM];
@@ -230,7 +225,7 @@ int* M_makeMaze(float* start_x, float* start_y){
             overlap = M_isRoomOverlapping(rooms_x, rooms_y, rooms_h, rooms_w, i);
         }
 
-        M_makeRoom(maze, rooms_x[i], rooms_y[i], rooms_h[i], rooms_w[i]);
+        M_makeRoom(maze.map, rooms_x[i], rooms_y[i], rooms_h[i], rooms_w[i]);
     }
 
     int is_connected[M_NB_ROOM];
@@ -244,14 +239,14 @@ int* M_makeMaze(float* start_x, float* start_y){
         i1 = randMinMax(0, M_NB_ROOM);
         i2 = randMinMax(0, M_NB_ROOM);
         if(i1!=i2){
-            M_makeTunnel(maze, rooms_x, rooms_y, rooms_h, rooms_w, i1, i2);
+            M_makeTunnel(maze.map, rooms_x, rooms_y, rooms_h, rooms_w, i1, i2);
             is_connected[i1] = 1;
             is_connected[i2] = 1;
             connected = M_areRoomsConnected(is_connected);
         }
     }
 
-    M_addDetails(maze, rooms_x, rooms_y, rooms_h, rooms_w);
+    M_addDetails(maze.map, rooms_x, rooms_y, rooms_h, rooms_w);
 
     *start_x = (float) rooms_x[0] + ((float) rooms_w[0])/2.f;
     *start_y = (float) rooms_y[0] + ((float) rooms_h[0])/2.f;

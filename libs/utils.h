@@ -46,6 +46,25 @@
         S_BOTTOM
     };
 
+    typedef struct player
+    {
+        float X;
+        float Y;
+        float Z;
+        float speedX;
+        float speedY;
+        float direction;
+        int isJumping;
+        double t_jumpStart;
+    } P_player;
+
+    typedef struct ray
+    {
+        float X;
+        float Y;
+        float distance;
+    } Ray;
+
     /*********************/
     /* --- FUNCTIONS --- */
     /*********************/
@@ -56,6 +75,6 @@
     enum side get_side(float X, float Y);
     int isPillar(M_map map, float x, float y);
     float pillarRadius(M_map map, float x, float y);
-
+    float distanceToCenter(float x, float y);
     
 #endif

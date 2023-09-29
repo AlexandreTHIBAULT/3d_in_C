@@ -61,3 +61,8 @@ float pillarRadius(M_map map, float x, float y){
         return PILLAR_3_RADIUS;
     }
 }
+
+float distanceToCenter(float x, float y){
+    return sqrtf(  powf( (x - (float)((int)x)-0.5f ), 2) 
+                 + powf( (y - (float)((int)y)-0.5f ), 2) );
+}

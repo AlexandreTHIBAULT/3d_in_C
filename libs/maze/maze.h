@@ -52,6 +52,7 @@
     int M_areRoomsConnected(int is_connected[]);
     int M_isCorner(int* maze, int x, int y);
     void M_addDetails(int* maze, int rooms_x[], int rooms_y[], int rooms_h[], int rooms_w[]);
+    void M_genStart(int* maze, float* start_x, float* start_y);
     M_map M_makeMaze(float* start_x, float* start_y);
 
 #endif

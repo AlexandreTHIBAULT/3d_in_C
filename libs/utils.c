@@ -52,6 +52,9 @@ int isPillar(M_map map, float x, float y){
     if ( map.map[ ((int)y)*map.width + (int)x ] == 3 ) {
         return 1;
     }
+    else if ( map.map[ ((int)y)*map.width + (int)x ] == 4 ) {
+        return 1;
+    }
 
     return 0;
 }
@@ -60,9 +63,17 @@ float pillarRadius(M_map map, float x, float y){
     if ( map.map[ ((int)y)*map.width + (int)x ] == 3 ) {
         return PILLAR_3_RADIUS;
     }
+    else if ( map.map[ ((int)y)*map.width + (int)x ] == 4 ) {
+        return PILLAR_4_RADIUS;
+    }
 }
 
 float distanceToCenter(float x, float y){
     return sqrtf(  powf( (x - (float)((int)x)-0.5f ), 2) 
                  + powf( (y - (float)((int)y)-0.5f ), 2) );
+}
+
+float distance(float x1, float y1, float x2, float y2){
+    return sqrtf(  powf( (x1 - x2), 2) 
+                 + powf( (y1 - y2), 2) );
 }

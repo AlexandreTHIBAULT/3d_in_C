@@ -184,13 +184,14 @@ void M_addDetails(int* maze, int rooms_x[], int rooms_y[], int rooms_h[], int ro
 
         for(int b=0; b<nb_box; b++){
             ok = 0;
+            int turn = 0;
             while(!ok){
+                turn ++;
                 x = randMinMax(rooms_x[i], rooms_x[i]+rooms_w[i]);
                 y = randMinMax(rooms_y[i], rooms_y[i]+rooms_h[i]);
 
-                if( M_isCorner(maze, x, y) ) ok=1;
+                if( M_isCorner(maze, x, y) || turn>50) ok=1;
             }
-
             maze[y*M_W + x] = 2;
         }
 
@@ -204,7 +205,31 @@ void M_addDetails(int* maze, int rooms_x[], int rooms_y[], int rooms_h[], int ro
 
 }
 
-M_map M_makeMaze(float* start_x, float* start_y){
+void M_genStart(int* maze, float* start_x, float* start_y){
+    for(int y=0; y<M_H; y++){
+    for(int x=0; x<M_W; x++){
+        if(maze[y*M_W + x]!=1){
+            maze[(y+1)*M_W + (x+1)]=0;
+            *start_x = x+1.5f;
+            *start_y = y+1.5f;
+            return;
+        }
+    }
+    }
+}
+
+void M_genEnd(int* maze){
+    for(int x=M_W-1; x>=0; x--){
+    for(int y=M_H-1; y>=0; y--){
+        if(maze[y*M_W + x]!=1){
+            maze[y*M_W + x]=4;
+            return;
+        }
+    }
+    }
+}
+
+M_map M_makeMaze(float* start_x, float* start_y){  
     srand( time( NULL ) );
     M_map maze = M_initMaze();
 
@@ -221,7 +246,7 @@ M_map M_makeMaze(float* start_x, float* start_y){
 
             rooms_x[i] =  randMinMax(1, M_W - rooms_w[i] - 1);
             rooms_y[i] =  randMinMax(1, M_H - rooms_h[i] - 1);
-
+            
             overlap = M_isRoomOverlapping(rooms_x, rooms_y, rooms_h, rooms_w, i);
         }
 
@@ -248,8 +273,11 @@ M_map M_makeMaze(float* start_x, float* start_y){
 
     M_addDetails(maze.map, rooms_x, rooms_y, rooms_h, rooms_w);
 
-    *start_x = (float) rooms_x[0] + ((float) rooms_w[0])/2.f;
-    *start_y = (float) rooms_y[0] + ((float) rooms_h[0])/2.f;
+    /**start_x = (float) rooms_x[0] + ((float) rooms_w[0])/2.f;
+    *start_y = (float) rooms_y[0] + ((float) rooms_h[0])/2.f;*/
+
+    M_genStart(maze.map, start_x, start_y);
+    M_genEnd(maze.map);
 
     return maze;
 };

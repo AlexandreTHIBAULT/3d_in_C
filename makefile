@@ -1,5 +1,5 @@
 CC = gcc
-OBJ = 3d.o libs/utils.o libs/maze/maze.o libs/render/render.o libs/color/color.o libs/object/object.o
+OBJ = 3d.o libs/utils.o libs/maze/maze.o libs/render/render.o libs/color/color.o libs/object/object.o libs/gameplay/gameplay.o
 LDFLAGS = -lglfw -lGL -lXrandr -lXi -lXinerama -lX11 -lrt -ldl -lm
 
 all:

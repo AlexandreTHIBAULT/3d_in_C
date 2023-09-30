@@ -30,10 +30,14 @@
     #define O_NB_MAX_MONSTERS 10
     #define O_NB_MAX_OBJECTS 255
 
-    #define SHOW_FPS
-    #define RANDOM_MAP
+    #define PILLAR_3_RADIUS 0.33f
+    #define PILLAR_4_RADIUS 0.1f
+    #define WALL_HEIGHT 11.f
+    #define TILE_LENGTH 10
+    #define VIEW_RANGE 7
+    #define NB_MONSTER 20
 
-    #define PILLAR_3_RADIUS 0.33f;
+    #define SHOW_FPS
 
     /*****************/
     /* --- TYPES --- */

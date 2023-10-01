@@ -77,3 +77,8 @@ float distance(float x1, float y1, float x2, float y2){
     return sqrtf(  powf( (x1 - x2), 2) 
                  + powf( (y1 - y2), 2) );
 }
+
+int isPositionFree(M_map map, float x, float y){
+    return ( map.map[ ((int)(y))*map.width + (int)(x) ] == 0  
+                || (isPillar(map, x, y) && distanceToCenter(x, y)>=pillarRadius(map, x, y)) );
+}

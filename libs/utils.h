@@ -26,9 +26,10 @@
     #define K_TURN_LEFT  GLFW_KEY_Q
     #define K_TURN_RIGHT GLFW_KEY_E
     #define K_JUMP       GLFW_KEY_SPACE
+    #define K_SHOOT      GLFW_KEY_LEFT_SHIFT
 
     #define O_NB_MAX_MONSTERS 10
-    #define O_NB_MAX_OBJECTS 255
+    #define O_NB_MAX_OBJECTS 256
 
     #define PILLAR_3_RADIUS 0.33f
     #define PILLAR_4_RADIUS 0.1f
@@ -60,6 +61,7 @@
         float direction;
         int isJumping;
         double t_jumpStart;
+        double t_lastShoot;
     } P_player;
 
     typedef struct ray
@@ -80,5 +82,7 @@
     int isPillar(M_map map, float x, float y);
     float pillarRadius(M_map map, float x, float y);
     float distanceToCenter(float x, float y);
-    
+    float distance(float x1, float y1, float x2, float y2);
+    int isPositionFree(M_map map, float x, float y);
+
 #endif

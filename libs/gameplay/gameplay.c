@@ -1,5 +1,18 @@
 #include "gameplay.h"
 
+P_player G_action(GLFWwindow * window, P_player player, O_objects_data* missile_data, Ray missile_dir[], T_texture text, double t_delta){
+    int state;
+    state = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
+    double t = glfwGetTime();
+
+    if (state == GLFW_PRESS && t-player.t_lastShoot>0.5){
+        player.t_lastShoot = t;
+        O_shoot(player, missile_data, missile_dir, text);
+    }
+
+    return player;
+}
+
 P_player G_movement(GLFWwindow * window, P_player player, M_map map, double t_delta){
     float z_max = 2.f; // height of jumps
     float t2 = 1.f; // jump duration
@@ -48,9 +61,9 @@ P_player G_movement(GLFWwindow * window, P_player player, M_map map, double t_de
     player.speedX *= t_delta*2.f;
     player.speedY *= t_delta*2.f;
 
-    if (map.map[ ((int)(player.Y+player.speedY))*map.width + (int)(player.X+player.speedX) ] == 0  
-    || (isPillar(map, player.X+player.speedX, player.Y+player.speedY) && distanceToCenter(player.X+player.speedX, player.Y+player.speedY)>=pillarRadius(map, player.X+player.speedX, player.Y+player.speedY)) ){
-        
+    //if (map.map[ ((int)(player.Y+player.speedY))*map.width + (int)(player.X+player.speedX) ] == 0  
+    //|| (isPillar(map, player.X+player.speedX, player.Y+player.speedY) && distanceToCenter(player.X+player.speedX, player.Y+player.speedY)>=pillarRadius(map, player.X+player.speedX, player.Y+player.speedY)) ){
+    if(isPositionFree(map, player.X+player.speedX, player.Y+player.speedY)){
         player.X += player.speedX;
         player.Y += player.speedY;
     }

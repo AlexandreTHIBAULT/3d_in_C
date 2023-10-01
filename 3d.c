@@ -29,7 +29,7 @@ int main(void)
     /* Variables */
     GLFWwindow * window;
     double xpos, ypos, xpos_prev, ypos_prev; // for mouse movements
-    P_player player = {X:2.5f, Y:2.5f, Z:0.f, speedX:0.f, speedY:0.f, direction:0.f, isJumping:0, t_jumpStart:0.};
+    P_player player = {X:2.5f, Y:2.5f, Z:0.f, speedX:0.f, speedY:0.f, direction:0.f, isJumping:0, t_jumpStart:0., t_lastShoot:0.};
     M_map map;
     enum side current_side;
     double t_delta;
@@ -47,10 +47,15 @@ int main(void)
     T_texture t_Slingshot;
     T_texture t_End;
     T_texture t_Cursor;
+    T_texture t_Missile;
 
     O_objects_data objects_data;
     O_objects_data monsters_data;
+    O_objects_data missile_data;
     O_objects_data complete_data;
+
+    missile_data.nb = 0;
+    Ray missile_dir[O_NB_MAX_OBJECTS];
 
     /* Initialize the library */
     if (!glfwInit())
@@ -75,7 +80,8 @@ int main(void)
 
     /* Setup key callback */
     glfwSetKeyCallback(window, key_callback);
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+    //glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     glEnable(GL_MULTISAMPLE);
 
@@ -95,6 +101,7 @@ int main(void)
     T_loadTexture(&t_Slingshot  , "textures/slingshot.png");
     T_loadTexture(&t_End        , "textures/end.png"      );
     T_loadTexture(&t_Cursor     , "textures/cursor.png"   );
+    T_loadTexture(&t_Missile    , "textures/rock.png"     );
 
     /* Create map */
     map = M_makeMaze(&player.X, &player.Y);
@@ -133,7 +140,7 @@ int main(void)
         C_color ceiling_c = {0.2, 0.2, 0.2};
         T_drawBackgroundTexture(player, t_Soil, t_Soil2);
 
-        complete_data = O_makeCompleteData(objects_data, monsters_data);
+        complete_data = O_makeCompleteData(objects_data, monsters_data, missile_data);
 
         float ray_direction;
         for (int i=0; i<(V_NBRAY); i++){
@@ -193,6 +200,11 @@ int main(void)
             
         }
 
+        O_monsterMoveAll(map, &monsters_data, player, t_delta);
+        O_updateShootMoove(&missile_data, missile_dir, t_delta);
+        O_updateShoot(map, &missile_data, missile_dir);
+        O_checkEnemiesTouch(&monsters_data, &missile_data, missile_dir);
+
         /* SHOW FPS */
         if (time-t>=1.){
             //printf("%f | %f\n", direction, T_distanceToWall(playerX, playerY, direction));
@@ -207,10 +219,11 @@ int main(void)
 
         /* Inputs */
         player = G_movement(window, player, map, t_delta);
-        
+        player = G_action(window, player, &missile_data, missile_dir, t_Missile, t_delta);
+
         glfwGetCursorPos(window, &xpos, &ypos);
         if(xpos!=xpos_prev){
-            player.direction += (float)(xpos-xpos_prev) * M_PI/100. * t_delta*25;
+            player.direction += (float)(xpos-xpos_prev) * M_PI/100. ;
             xpos_prev = xpos;
         }
         

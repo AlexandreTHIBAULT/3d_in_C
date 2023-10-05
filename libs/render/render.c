@@ -354,8 +354,50 @@ void T_drawWall(P_player player, M_map map, Ray ray, int n, enum side current_si
     T_drawTexture(xL, yB, xR, yT, 0.0f, prop, prop, c);
 }
 
+void T_drawDamage(){
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDisable(GL_TEXTURE_2D);
+    glBegin(GL_TRIANGLES);
+        glColor4f(C_red.r, C_red.g, C_red.b, 1);
+        glVertex3f(-1, -1, 0);
+        glColor4f(0, 0, 0, 0);
+        glVertex3f(0, -1, 0);
+        glColor4f(0, 0, 0, 0);
+        glVertex3f(-1, 0, 0);
+    glEnd();
+
+    glBegin(GL_TRIANGLES);
+        glColor4f(C_red.r, C_red.g, C_red.b, 1);
+        glVertex3f(1, 1, 0);
+        glColor4f(0, 0, 0, 0);
+        glVertex3f(0, 1, 0);
+        glColor4f(0, 0, 0, 0);
+        glVertex3f(1, 0, 0);
+    glEnd();
+
+    glBegin(GL_TRIANGLES);
+        glColor4f(C_red.r, C_red.g, C_red.b, 1);
+        glVertex3f(1, -1, 0);
+        glColor4f(0, 0, 0, 0);
+        glVertex3f(0, -1, 0);
+        glColor4f(0, 0, 0, 0);
+        glVertex3f(1, 0, 0);
+    glEnd();
+
+    glBegin(GL_TRIANGLES);
+        glColor4f(C_red.r, C_red.g, C_red.b, 1);
+        glVertex3f(-1, 1, 0);
+        glColor4f(0, 0, 0, 0);
+        glVertex3f(0, 1, 0);
+        glColor4f(0, 0, 0, 0);
+        glVertex3f(-1, 0, 0);
+    glEnd();
+}
+
 void T_drawUI(M_map map, P_player player, T_texture weapon, T_texture cursor){
-    T_drawMap(map, player);
+    //T_drawDamage();
+
     T_drawWeapon(weapon);
 
     glEnable(GL_BLEND);
@@ -363,4 +405,6 @@ void T_drawUI(M_map map, P_player player, T_texture weapon, T_texture cursor){
     glBindTexture ( GL_TEXTURE_2D, cursor.image);
     T_drawTexture(-0.027f, -0.049f, 0.027f, 0.049f, 0, 0, 1, C_white);
 
+
+    T_drawMap(map, player);
 }

@@ -37,6 +37,7 @@
     #define TILE_LENGTH 10
     #define VIEW_RANGE 7
     #define NB_MONSTER 20
+    #define MAX_HP 10
 
     #define SHOW_FPS
 
@@ -62,6 +63,7 @@
         int isJumping;
         double t_jumpStart;
         double t_lastShoot;
+        int hp;
     } P_player;
 
     typedef struct ray

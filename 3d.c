@@ -29,7 +29,7 @@ int main(void)
     /* Variables */
     GLFWwindow * window;
     double xpos, ypos, xpos_prev, ypos_prev; // for mouse movements
-    P_player player = {X:2.5f, Y:2.5f, Z:0.f, speedX:0.f, speedY:0.f, direction:0.f, isJumping:0, t_jumpStart:0., t_lastShoot:0.};
+    P_player player = {X:2.5f, Y:2.5f, Z:0.f, speedX:0.f, speedY:0.f, direction:0.f, isJumping:0, t_jumpStart:0., t_lastShoot:0., hp:MAX_HP-2};
     M_map map;
     enum side current_side;
     double t_delta;

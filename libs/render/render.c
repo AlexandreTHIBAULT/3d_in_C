@@ -395,10 +395,47 @@ void T_drawDamage(){
     glEnd();
 }
 
+void T_drawHP(int nb,
+            int isFull){
+
+    float hp_w = 0.03f;
+    float hp_w_spacing = 0.04f;
+    float hp_h = hp_w * 4.f;
+
+    float pos_x = - hp_w_spacing*MAX_HP/2.f;
+    float pos_y = 1 - hp_h*1.8;
+    
+    glDisable (GL_TEXTURE_2D);
+    glBegin(GL_QUADS);
+        if(isFull) glColor3f(C_red.r, C_red.g, C_red.b);
+        else glColor4f(C_white.r, C_white.g, C_white.b , 0.2);
+        glTexCoord2f (0.0f,0.0f);
+        glVertex3f(pos_x+hp_w_spacing*nb, pos_y, 0); // bottom left
+        glTexCoord2f (1.0f,0.0f);
+        glVertex3f(pos_x + hp_w +hp_w_spacing*nb, pos_y, 0); // bottom right
+        glTexCoord2f (1.0f,1.0f);
+        glVertex3f(pos_x + hp_w +hp_w_spacing*nb, pos_y + hp_h, 0);// top right
+        glTexCoord2f (0.0f,1.0f);
+        glVertex3f(pos_x +hp_w_spacing*nb, pos_y + hp_h, 0); // top left
+    glEnd();
+
+}
+
+void T_drawPlayerHP(P_player player){
+    for(int i=0; i<player.hp; i++){
+        T_drawHP(i, 1);
+    }
+    for(int i=player.hp; i<MAX_HP; i++){
+        T_drawHP(i, 0);    
+    }
+}
+
 void T_drawUI(M_map map, P_player player, T_texture weapon, T_texture cursor){
     //T_drawDamage();
 
     T_drawWeapon(weapon);
+
+    T_drawPlayerHP(player);
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
